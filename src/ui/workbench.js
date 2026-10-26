@@ -46,8 +46,8 @@ export function mountUI(root){
         <div class="docchip card" hidden><div class="fig" id="figLbl"></div><div class="meta" id="figMeta"></div></div>
         <div class="buildtag card" id="btag"></div>
         <div class="maxhint card">esc · double-click to restore</div>
-        <div class="viewcube card"><svg width="54" height="50" viewBox="0 0 54 50">
-          <g fill="none" stroke="#231e16" stroke-width="1.3">
+        <div class="viewcube"><svg width="54" height="50" viewBox="0 0 54 50">
+          <g fill="none" stroke="#231e16" stroke-width="1.3" opacity=".75">
             <path d="M27 4 L48 16 L48 36 L27 47 L6 36 L6 16 Z"/>
             <path d="M27 4 L27 25 M6 16 L27 25 M48 16 L27 25 M27 25 L27 47"/>
             <path d="M16.5 10 L37.5 22 M16.5 10 L16.5 31 M37.5 22 L37.5 43" stroke="rgba(65,83,143,.4)" stroke-width=".8"/>
@@ -55,7 +55,7 @@ export function mountUI(root){
           <text x="27" y="15" font-size="6" text-anchor="middle" font-family="ui-monospace" fill="#41538f">Z</text>
           <text x="14" y="39" font-size="6" text-anchor="middle" font-family="ui-monospace" fill="#231e16">X</text>
           <text x="40" y="39" font-size="6" text-anchor="middle" font-family="ui-monospace" fill="#231e16">Y</text>
-        </svg><span class="lbl">ISO-GRID</span></div>
+        </svg></div>
         <div class="strips" id="strips"></div>
         <div id="chkl"></div>
         <div class="navbar card" id="navbar"></div>

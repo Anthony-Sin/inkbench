@@ -20,11 +20,6 @@ export function mountTerm(root, hooks){
   root.innerHTML = `
     <div class="thead"><span class="dots"><i></i><i></i><i></i></span>PAD-TERM <span class="sheet">/dev/agent0</span></div>
     <div id="tlog"></div>
-    <div id="agentLine">
-      <span>agent:</span>
-      ${Object.keys(AGENTS).map(a=>`<span class="ag-chip${a===agent?' on':''}" data-ag="${a}">${a}</span>`).join('')}
-      <span class="role" id="agRole">${AGENTS[agent].tag}</span>
-    </div>
     <div id="promptRow">
       <span class="pr"><b id="agName" class="${chipCls(agent).trim()}">${agent}</b><i>@inkbench</i>:~$</span>
       <input id="tin" spellcheck="false" placeholder='build "a desk lamp…" · help'>
@@ -44,13 +39,9 @@ export function mountTerm(root, hooks){
   }
   function setAgent(a, quiet){
     agent = a;
-    $$('.ag-chip').forEach(c => c.classList.toggle('on', c.dataset.ag === a));
     const nm = $('#agName'); nm.textContent = a;
     nm.className = chipCls(a).trim();
-    $('#agRole').textContent = AGENTS[a].tag;
     if (!quiet) line(`agent ▸ <span class="hl">${a}</span> — ${AGENTS[a].model}`); }
-
-  $$('.ag-chip').forEach(c => c.addEventListener('click', () => setAgent(c.dataset.ag)));
 
   function cmd(raw){
     line(esc(raw), 'in', true);
