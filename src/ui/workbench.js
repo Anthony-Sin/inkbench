@@ -113,9 +113,12 @@ function makeTabs(cardEls, defs){
   function snapshot(){
     const st = state[active] || (state[active] = {});
     st.scrollTop = cardEls.body.scrollTop;
-    st.open = new Set([...cardEls.body.querySelectorAll('details[open] > summary')]
-      .map(s => { const t = s.querySelector('span'); return t ? t.textContent : null; })
-      .filter(Boolean));
+    const ds = cardEls.body.querySelectorAll('details');
+    st.open = ds.length
+      ? new Set([...cardEls.body.querySelectorAll('details[open] > summary')]
+        .map(s => { const t = s.querySelector('span'); return t ? t.textContent : null; })
+        .filter(Boolean))
+      : null;   // pane had no details (empty/json) → keep the render's own defaults
   }
   function restore(){
     const st = state[active];
@@ -463,6 +466,8 @@ export function mountUI(root){
       } else {
         draftFig.spec = spec;
         draftFig.built = api.built;
+        if (spec && spec.name && String(spec.name).trim())
+          draftFig.name = shortTitle(spec.name);   // follow agent renames across attempts
       }
       updateGalEntry(draftFig);
       // a user-pinned gallery figure keeps the cards while a run is in

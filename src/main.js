@@ -15,7 +15,11 @@ ui.onSubmit(async (promptText) => {
     const { spec: rawSpec } = await design(promptText, feedback).catch(e => { ui.setStatus('LLM error: '+e.message); throw e; });
     const spec = normalizeSpec(rawSpec);
     const errs = validateSpec(spec);
-    if (errs.length) { feedback = 'Schema errors: '+errs.join('; '); continue; }
+    if (errs.length) {
+      feedback = 'Schema errors: ' + errs.join('; ');
+      ui.setStatus(`attempt ${attempt} — spec rejected: ${errs[0]}${errs.length > 1 ? ` (+${errs.length - 1} more)` : ''} — redesigning…`);
+      continue;
+    }
     built = buildScene(spec);
     ui.showModel(built);
     ui.showSpec(spec);
