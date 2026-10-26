@@ -9,9 +9,10 @@ const env = Object.fromEntries(
   (fs.existsSync(path.join(ROOT,'.env')) ? fs.readFileSync(path.join(ROOT,'.env'),'utf8') : '')
     .split('\n').filter(l=>l.includes('=')&&!l.startsWith('#')).map(l=>{const i=l.indexOf('=');return [l.slice(0,i).trim(), l.slice(i+1).trim()];})
 );
-const API_BASE = env.LLM_API_BASE || 'https://api.dev.meta.ai/v1';
-const API_KEY = env.LLM_API_KEY || '';
+const API_BASE = env.LLM_API_BASE || 'https://api.meta.ai/v1';
+const API_KEY = env.LLM_API_KEY || process.env.LLM_API_KEY || '';
 const MODEL = env.LLM_MODEL || 'muse-spark-1.3';
+const PORT = +(env.PORT || process.env.PORT || 4173);
 
 const MIME = {'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2'};
 
@@ -36,4 +37,8 @@ http.createServer(async (req,res)=>{
   if (u.pathname.startsWith('/vendor/three/')) fp = path.join(ROOT,'node_modules/three', u.pathname.slice(13));
   if (!fp.startsWith(ROOT)) { res.writeHead(403); return res.end(); }
   fs.readFile(fp,(e,d)=>{ if(e){res.writeHead(404);res.end('404')}else{res.writeHead(200,{'Content-Type':MIME[path.extname(fp)]||'application/octet-stream'});res.end(d)} });
-}).listen(4173, ()=>console.log('inkbench on http://localhost:4173'));
+}).listen(PORT, ()=>console.log(`inkbench on http://localhost:${PORT}`))
+  .on('error', (e) => {
+    if (e.code === 'EADDRINUSE'){ console.error(`port ${PORT} in use — set PORT=<n> or free it`); process.exit(1); }
+    throw e;
+  });

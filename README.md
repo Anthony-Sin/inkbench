@@ -21,9 +21,14 @@ up to 3 attempts. The whole loop is live in the UI's agent log.
 
 ```bash
 npm install        # three.js only
-cp .env.example .env   # add your Meta Model API key
-npm run dev        # http://localhost:4173
+cp .env.example .env   # add your Meta Model API key (LLM_API_KEY=...)
+npm run dev        # http://localhost:4173  (PORT=<n> to change)
 ```
+
+Design language comparison vs. the Colorfigures reference (left) and mainstream
+AI-CAD sites: `research/COMPARE.md` — rendered evidence in `docs/compare.png`.
+
+![us vs the references](docs/compare.png)
 
 ## Layout
 
