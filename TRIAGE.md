@@ -64,3 +64,12 @@ Project: agentic CAD tool ("Fusion 360 w/ CLI/agentic") — browser app, NO vert
 - pushed: hero+verified.png refresh (tabs+arms visible), all R5 fixes
 - running: R6 quick verify of the 3 fixes (dd44fc74)
 - 14:00 progress-commit push armed; deadline 14:30
+
+## Final (14:15) — freeze state
+- R6: all 3 R5-fixes verified live (details defaults, fig renames, schema-reject logging) + bonus low fixed (details now track only USER toggles via summary-click capture — render defaults stay live across specs)
+- soak test: 10 tab flips mid-run + gallery restore + 20 wheel pans + explode — 0 errors, scroll contract holds
+- post-hardening reliability: lamp ×4, monitor stand, gear bracket(3 att), tamper — all verified; first-attempt pass now common
+- repo: https://github.com/Anthony-Sin/inkbench — all fixes pushed, tree clean
+- demo: research/demo_clip.mp4 (124s, shows fail→redesign→verified + JSON/Measures/Arms tabs)
+- remaining known-limitation: cavity/socket insertion can false-positive 'blocked' (conservative); stale-label anomaly never reproduced
+- Devpost assets ready: research/SUBMISSION.md draft + demo_clip.mp4 + docs/*.png
