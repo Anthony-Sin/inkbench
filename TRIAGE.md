@@ -56,3 +56,11 @@ Project: agentic CAD tool ("Fusion 360 w/ CLI/agentic") — browser app, NO vert
 - landed: new demo_clip.mp4 (124s) w/ JSON+Measures+Arms beats — opened in user's Chromium
 - landed: research/SUBMISSION.md devpost draft
 - note: clearance check semantics confirmed honest — solid-primitive world has no drilled holes, so movable joints NEED axial separation
+
+## Round 6 (13:30–14:00) — PUBLISHED + R5 attack + clean-room
+- PUBLISHED 13:30: https://github.com/Anthony-Sin/inkbench — fresh history inside hackathon window, 61 files, no node_modules/.env/videos
+- clean-room clone test: npm install 1.6s, boots+serves+renders w/o key (graceful 401 in UI), BUT found: hardcoded port EADDRINUSE crash → fixed (PORT env + clean msg); .env.example vs server default host mismatch → fixed; compare.png unreferenced → now embedded in README
+- R5 found: details all-closed on first paint (my bidirectional fix over-applied to empty panes) → fixed+verified live; fig name frozen at attempt-1 → follows renames; schema-reject retries invisible → now logged; TRIAGE/research paths staying public (deliberate — shows the process)
+- pushed: hero+verified.png refresh (tabs+arms visible), all R5 fixes
+- running: R6 quick verify of the 3 fixes (dd44fc74)
+- 14:00 progress-commit push armed; deadline 14:30
