@@ -17,6 +17,9 @@ viewport, then runs **real geometric verification** — nothing is faked or pre-
 If a check fails, the failure text is fed back to the agent, which redesigns —
 up to 3 attempts. The whole loop is live in the UI's agent log.
 
+Demo recording (a real fail → redesign → verified run, ~2 min):
+[`research/demo_clip.mp4`](research/demo_clip.mp4)
+
 ## Run
 
 ```bash
