@@ -107,25 +107,32 @@ function makeTabs(cardEls, defs){
     const j = (i + (e.key === 'ArrowRight' ? 1 : defs.length - 1)) % defs.length;
     select(defs[j].id); btns[defs[j].id].focus();
   });
-  /* panes are rebuilt on every repaint, so capture scroll position and which
-     <details> sections are open BEFORE clear — otherwise every design-loop
-     emit would yank the reader back to the top of the card */
+  /* panes are rebuilt on every repaint — keep scroll position, and persist
+     only the <details> the USER toggled (absolute open-sets would freeze a
+     section's render-default when a later spec flips it). 'toggle' is
+     non-bubbling in some engines, so capture on the body. */
+  cardEls.body.addEventListener('click', (e) => {
+    const s = e.target.closest && e.target.closest('summary');
+    if (!s) return;
+    const d = s.parentElement;
+    if (!d || d.tagName !== 'DETAILS') return;
+    const t = s.querySelector('span');
+    if (!t) return;
+    // capture-phase: d.open is still the PRE-toggle value here
+    const st = state[active] || (state[active] = {});
+    (st.touched || (st.touched = {}))[t.textContent] = !d.open;
+  }, true);
   function snapshot(){
     const st = state[active] || (state[active] = {});
     st.scrollTop = cardEls.body.scrollTop;
-    const ds = cardEls.body.querySelectorAll('details');
-    st.open = ds.length
-      ? new Set([...cardEls.body.querySelectorAll('details[open] > summary')]
-        .map(s => { const t = s.querySelector('span'); return t ? t.textContent : null; })
-        .filter(Boolean))
-      : null;   // pane had no details (empty/json) → keep the render's own defaults
   }
   function restore(){
     const st = state[active];
     if (!st) return;
-    if (st.open) for (const d of cardEls.body.querySelectorAll('details')){
+    if (st.touched) for (const d of cardEls.body.querySelectorAll('details')){
       const t = d.querySelector('summary > span');
-      if (t) d.toggleAttribute('open', st.open.has(t.textContent));
+      if (t && st.touched[t.textContent] !== undefined)
+        d.toggleAttribute('open', st.touched[t.textContent]);
     }
     cardEls.body.scrollTop = st.scrollTop || 0;
   }
