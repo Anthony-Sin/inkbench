@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1700">
+<title>Part analytics — FIG-1 · inkbench</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f9; --panel:#ffffff; --panel2:#fafbfd;
+  --line:#e3e7ee; --line2:#d3dae4;
+  --txt:#1c2530; --mut:#5b6675; --dim:#93a0b0;
+  --acc:#3d5bf0; --acc-soft:#edf1fe;
+  --ok:#0e9f5d; --ok-soft:#e2f5eb;
+  --warn:#c77414; --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--txt);overflow:hidden;display:flex;
+  font:12.5px/1.5 "Inter",-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,select{font:inherit;color:inherit}
+::selection{background:var(--acc-soft)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#cdd5e0;border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- left rail ---------- */
+#rail{width:216px;flex:0 0 216px;background:var(--panel);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;min-height:0}
+#brand{height:50px;display:flex;align-items:center;gap:9px;padding:0 14px;border-bottom:1px solid var(--line)}
+#brand .mk{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--acc),#7a5af5);
+  color:#fff;display:grid;place-items:center;font-size:10px;font-weight:800}
+#brand .w{font-weight:700;font-size:13.5px}
+#railnav{flex:1;overflow-y:auto;padding:12px 8px}
+.rsec{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);padding:12px 8px 5px}
+.rsec:first-child{padding-top:0}
+.ritem{display:flex;align-items:center;gap:9px;height:30px;padding:0 8px;border-radius:7px;color:var(--mut);
+  font-size:12.5px;cursor:pointer;user-select:none;transition:background .12s,color .12s}
+.ritem:hover{background:#f0f3f8;color:var(--txt)}
+.ritem.on{background:var(--acc-soft);color:var(--acc);font-weight:600}
+.ritem .ic{width:15px;text-align:center;flex:0 0 15px;font-size:12px}
+.ritem .lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ritem .n{font:600 10px var(--mono);color:var(--dim)}
+.ritem.on .n{color:var(--acc)}
+#railbrief{border-top:1px solid var(--line);padding:12px}
+#railbrief .lb{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
+#brief{width:100%;height:60px;border:1px solid var(--line2);border-radius:8px;padding:8px 10px;resize:none;
+  font-size:12px;background:var(--panel2);transition:all .13s;display:block}
+#brief::placeholder{color:var(--dim)}
+#brief:focus{outline:none;border-color:var(--acc);background:#fff;box-shadow:0 0 0 3px var(--acc-soft)}
+#go{width:100%;height:30px;margin-top:8px;border-radius:7px;background:var(--acc);color:#fff;font-weight:600;
+  font-size:12px;transition:background .13s}
+#go:hover{background:#2f49c7}
+#go:disabled{opacity:.45;cursor:not-allowed}
+
+/* ---------- main ---------- */
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+#mhead{height:50px;flex:0 0 50px;background:var(--panel);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;padding:0 18px}
+#mhead h1{font-size:15px;font-weight:700;display:flex;align-items:center;gap:9px}
+#mhead h1 .fig{font:600 10.5px var(--mono);color:var(--acc);background:var(--acc-soft);border-radius:5px;padding:2.5px 7px}
+#mhead .sub{color:var(--dim);font-size:12px}
+#mhead .r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.vpill{display:flex;align-items:center;gap:7px;height:28px;padding:0 11px;border-radius:99px;
+  background:var(--ok-soft);color:var(--ok);font-size:11.5px;font-weight:650}
+.vpill .d{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+
+/* filters */
+#filters{height:46px;flex:0 0 46px;background:var(--panel);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:8px;padding:0 18px}
+.fchip{height:28px;padding:0 11px;border-radius:14px;border:1px solid var(--line2);color:var(--mut);
+  font-size:12px;font-weight:550;display:flex;align-items:center;gap:6px;transition:all .13s}
+.fchip:hover{border-color:var(--acc);color:var(--acc)}
+.fchip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.fchip .sw{width:8px;height:8px;border-radius:2px}
+.fsep{width:1px;height:20px;background:var(--line2);margin:0 4px}
+#fshape{height:28px;border:1px solid var(--line2);border-radius:7px;padding:0 8px;font-size:12px;
+  color:var(--mut);background:#fff;cursor:pointer}
+#fshape:hover{border-color:var(--acc)}
+#fq{width:170px;height:28px;border:1px solid var(--line2);border-radius:7px;padding:0 9px;font-size:12px}
+#fq::placeholder{color:var(--dim)}
+#fq:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-soft)}
+#freset{color:var(--dim);font-size:12px;padding:4px 8px;border-radius:6px}
+#freset:hover{color:var(--acc);background:var(--acc-soft)}
+#fmeta{margin-left:auto;font-size:11.5px;color:var(--dim)}
+#fmeta b{color:var(--txt);font-family:var(--mono)}
+
+/* content grid */
+#content{flex:1;min-height:0;display:grid;gap:12px;padding:12px 14px;
+  grid-template-columns:1fr 330px;grid-template-rows:1fr 208px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;
+  min-height:0;overflow:hidden}
+.card .ch{height:36px;flex:0 0 36px;display:flex;align-items:center;gap:8px;padding:0 14px;
+  border-bottom:1px solid var(--line);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.card .ch .x{margin-left:auto;font:500 10px var(--mono);color:var(--dim);letter-spacing:0;text-transform:none}
+.card .cb{flex:1;min-height:0;overflow:auto}
+
+/* parts table */
+#t-parts{grid-column:1;grid-row:1}
+table.pt{width:100%;border-collapse:collapse;font-size:12px}
+.pt th{position:sticky;top:0;background:var(--panel);z-index:2;text-align:left;font-size:10.5px;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--mut);padding:8px 10px;border-bottom:1px solid var(--line2);
+  cursor:pointer;user-select:none;white-space:nowrap}
+.pt th:hover{color:var(--acc);background:var(--panel2)}
+.pt th .ar{color:var(--acc);font-size:9px;margin-left:3px}
+.pt th.num{text-align:right}
+.pt td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.pt tbody tr{transition:background .1s;cursor:default}
+.pt tbody tr:hover{background:#f5f8ff}
+.pt td.num{text-align:right;font-family:var(--mono);font-size:11px;color:var(--mut)}
+.pt td .id{font-weight:650}
+.pt td .id::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2.5px;margin-right:7px;background:var(--dot,#ccc)}
+.scell{font-size:11.5px;color:var(--mut);display:inline-flex;align-items:center;gap:5px}
+.mcell{font:11px var(--mono);color:var(--mut)}
+.mcell .sw2{display:inline-block;width:8px;height:8px;border-radius:2.5px;margin-right:6px}
+.barcell{position:relative;min-width:130px}
+.barcell .bar{position:absolute;left:0;top:4px;bottom:4px;border-radius:3px;background:linear-gradient(90deg,rgba(61,91,240,.14),rgba(61,91,240,.3))}
+.barcell .v{position:relative;font-family:var(--mono);font-size:11px;text-align:right;display:block}
+.shcell{font-size:11.5px;color:var(--mut)}
+.stcell{font:600 10px var(--mono);border-radius:4px;padding:2px 7px}
+.stcell.ok{background:var(--ok-soft);color:var(--ok)}
+.pt tfoot td{background:var(--panel2);border-top:1px solid var(--line2);border-bottom:0;
+  font-size:11.5px;font-weight:650;color:var(--mut);padding:8px 10px}
+.pt tfoot td.num{font-family:var(--mono)}
+
+/* right stack */
+#rstack{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:12px;min-height:0}
+#rstack .card{flex:0 0 auto}
+#rstack .card.grow{flex:1;min-height:0}
+/* render thumb */
+#rcard .cb{display:grid;place-items:center;padding:10px;background:
+  radial-gradient(#e8ecf3 1px,transparent 1px);background-size:16px 16px}
+#rcard img{max-height:148px;max-width:100%;border-radius:7px;border:1px solid var(--line2);box-shadow:0 8px 24px rgba(28,37,48,.12)}
+/* kpi inline */
+.kpi{display:flex;align-items:baseline;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
+.kpi:last-child{border-bottom:0}
+.kpi .k{flex:1;font-size:11.5px;color:var(--mut)}
+.kpi .v{font-size:19px;font-weight:700;letter-spacing:-.02em}
+.kpi .v small{font-size:11px;font-weight:600;color:var(--dim)}
+.kpi .v.ok{color:var(--ok)}
+/* checks mini */
+.ckm{display:flex;align-items:center;gap:8px;padding:5.5px 14px;font-size:11.5px;border-bottom:1px solid var(--line)}
+.ckm:last-child{border-bottom:0}
+.ckm .ci{width:15px;height:15px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;font-size:9px;flex:0 0 15px}
+.ckm .nm{flex:1;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ckm .mv{font:10px var(--mono);color:var(--acc)}
+
+/* bottom band */
+#t-ops{grid-column:1;grid-row:2}
+#t-log{grid-column:2;grid-row:2}
+table.ot{width:100%;border-collapse:collapse;font-size:11.5px}
+.ot th{position:sticky;top:0;background:var(--panel);text-align:left;font-size:10px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--mut);padding:6px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
+.ot td{padding:5px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ot tbody tr:hover{background:#f5f8ff}
+.ot .num{font-family:var(--mono);font-size:10.5px;color:var(--mut);text-align:right}
+.ot .nm{font-weight:600}
+.ot .dim{color:var(--dim);font-family:var(--mono);font-size:10.5px}
+.armtag{font:700 9.5px var(--mono);border-radius:4px;padding:1.5px 6px}
+.armtag.A{background:var(--acc-soft);color:var(--acc)}
+.armtag.B{background:#f3eafd;color:#8a3fd4}
+.armtag.J{background:#f0f2f5;color:var(--dim);border:1px dashed var(--line2)}
+#logbody{flex:1;overflow-y:auto;padding:8px 14px;font:10.5px/1.75 var(--mono);color:var(--mut);background:var(--panel2)}
+#logbody div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#logbody .g{color:var(--ok)}#logbody .c{color:var(--acc)}#logbody .y{color:var(--warn)}
+#logbody .t{color:var(--dim)}
+</style>
+</head>
+<body>
+
+<!-- left rail -->
+<div id="rail">
+  <div id="brand"><span class="mk">IK</span><span class="w">inkbench</span></div>
+  <div id="railnav">
+    <div class="rsec">Figures</div>
+    <div class="ritem on"><span class="ic">▣</span><span class="lbl" id="navfig"></span><span class="n">✓</span></div>
+    <div class="ritem"><span class="ic">＋</span><span class="lbl">New figure…</span></div>
+    <div class="rsec">Saved queries</div>
+    <div class="ritem on"><span class="ic">⬡</span><span class="lbl">Part analytics</span></div>
+    <div class="ritem"><span class="ic">◆</span><span class="lbl">Mass budget</span></div>
+    <div class="ritem"><span class="ic">↔</span><span class="lbl">Clearances</span></div>
+    <div class="ritem"><span class="ic">⚒</span><span class="lbl">Arm ops</span><span class="n" id="navops"></span></div>
+    <div class="rsec">Reports</div>
+    <div class="ritem"><span class="ic">✓</span><span class="lbl">report.checks</span><span class="n" id="navck"></span></div>
+    <div class="ritem"><span class="ic">≡</span><span class="lbl">agent.log</span></div>
+  </div>
+  <div id="railbrief">
+    <div class="lb">New brief</div>
+    <textarea id="brief" spellcheck="false" placeholder="Describe a mechanism…"></textarea>
+    <button id="go">Submit & design</button>
+  </div>
+</div>
+
+<!-- main -->
+<div id="main">
+  <div id="mhead">
+    <h1><span class="fig" id="hfig"></span><span id="hname"></span></h1>
+    <span class="sub" id="hsub"></span>
+    <div class="r"><span class="vpill"><span class="d"></span><span id="hv"></span></span></div>
+  </div>
+
+  <div id="filters">
+    <span style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.05em">MATERIAL</span>
+    <span id="fchips"></span>
+    <span class="fsep"></span>
+    <select id="fshape"><option value="">shape: all</option><option>box</option><option>cylinder</option><option>cone</option></select>
+    <input id="fq" spellcheck="false" placeholder="filter part id…">
+    <button id="freset">reset</button>
+    <span id="fmeta"></span>
+  </div>
+
+  <div id="content">
+    <!-- parts table -->
+    <div class="card" id="t-parts">
+      <div class="ch">spec.parts — measured<span class="x" id="tcount"></span></div>
+      <div class="cb"><table class="pt">
+        <thead><tr id="phead">
+          <th data-k="id">part<span class="ar"></span></th>
+          <th data-k="shape">shape<span class="ar"></span></th>
+          <th data-k="material">material<span class="ar"></span></th>
+          <th data-k="d0" class="num">dim x<span class="ar"></span></th>
+          <th data-k="d1" class="num">dim y<span class="ar"></span></th>
+          <th data-k="d2" class="num">dim z<span class="ar"></span></th>
+          <th data-k="volMM3" class="num">vol mm³<span class="ar"></span></th>
+          <th data-k="density" class="num">ρ kg/m³<span class="ar"></span></th>
+          <th data-k="massG" class="num">mass<span class="ar"></span></th>
+          <th data-k="share" class="num">share<span class="ar"></span></th>
+        </tr></thead>
+        <tbody id="pbody"></tbody>
+        <tfoot id="pfoot"></tfoot>
+      </table></div>
+    </div>
+
+    <!-- right stack -->
+    <div id="rstack">
+      <div class="card" id="rcard">
+        <div class="ch">render<span class="x">toon · mm</span></div>
+        <div class="cb"><img src="lamp_flat.png" alt="render" id="rimg" title="Click to toggle exploded" style="cursor:pointer"></div>
+      </div>
+      <div class="card">
+        <div class="ch">key metrics</div>
+        <div class="cb" style="overflow:hidden" id="kpis"></div>
+      </div>
+      <div class="card grow">
+        <div class="ch">verification<span class="x" id="ckx"></span></div>
+        <div class="cb" id="ckm"></div>
+      </div>
+    </div>
+
+    <!-- ops table -->
+    <div class="card" id="t-ops">
+      <div class="ch">build plan — arm ops<span class="x" id="opsx"></span></div>
+      <div class="cb"><table class="ot">
+        <thead><tr><th>#</th><th>op</th><th>target</th><th>arm/type</th><th style="text-align:right">mass g</th><th>seat/anchor</th><th>insert</th></tr></thead>
+        <tbody id="obody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- log -->
+    <div class="card" id="t-log">
+      <div class="ch">agent.log<span class="x">tail -f</span></div>
+      <div id="logbody"></div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const D=window.DATA,$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&gt;'}[c]));
+const checks=D.report.checks,passed=checks.filter(c=>c.status==='pass').length;
+const fig=D.figures[0];
+const v3=v=>'('+v.map(n=>(+n).toFixed(0)).join(',')+')';
+const totalMass=D.measures.reduce((s,m)=>s+m.massG,0);
+const stab=checks.find(c=>c.name==='stability');
+const matCol=m=>(D.spec.materials[m]||{}).color||'#ccc';
+
+$('#navfig').textContent='FIG-'+fig.figNum+' '+fig.name;
+$('#navops').textContent=D.plan.length;
+$('#navck').textContent=passed+'/'+checks.length;
+$('#hfig').textContent='FIG-'+fig.figNum;
+$('#hname').textContent='Part analytics — '+fig.name;
+$('#hsub').textContent=D.brief;
+$('#hv').textContent=D.report.pass?'VERIFIED':'FAILED';
+$('#ckx').textContent=passed+'/'+checks.length;
+$('#opsx').textContent=D.plan.filter(o=>o.kind==='place').length+' places · '+D.plan.filter(o=>o.kind==='joint').length+' joints';
+$('#brief').value=D.brief;
+
+/* ---- filter state ---- */
+let fmat='',fshape='',fq='';
+$('#fchips').innerHTML=[['','All'],...Object.keys(D.spec.materials).map(m=>[m,m])].map(([v,l])=>
+  `<button class="fchip${v===''?' on':''}" data-m="${v}">${v?`<span class="sw" style="background:${matCol(v)}"></span>`:''}${l}</button>`).join('');
+document.querySelectorAll('#fchips .fchip').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#fchips .fchip').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');fmat=b.dataset.m;renderRows();
+}));
+$('#fshape').addEventListener('change',e=>{fshape=e.target.value;renderRows()});
+$('#fq').addEventListener('input',e=>{fq=e.target.value.toLowerCase();renderRows()});
+$('#freset').addEventListener('click',()=>{
+  fmat='';fshape='';fq='';$('#fshape').value='';$('#fq').value='';
+  document.querySelectorAll('#fchips .fchip').forEach((x,i)=>x.classList.toggle('on',i===0));
+  renderRows();
+});
+
+/* ---- sorting ---- */
+let sortK='massG',sortD=-1;
+const keyOf={
+  id:m=>m.id,shape:m=>m.shape,material:m=>m.material,
+  d0:m=>m.dims[0],d1:m=>m.dims[1],d2:m=>m.dims[2],
+  volMM3:m=>m.volMM3,density:m=>m.density,massG:m=>m.massG,share:m=>m.massG/totalMass
+};
+document.querySelectorAll('#phead th').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.k;
+  if(sortK===k)sortD*=-1;else{sortK=k;sortD=k==='id'||k==='shape'||k==='material'?1:-1}
+  renderRows();
+}));
+const fmtDims=d=>d.map(n=>n>=100?Math.round(n):(+n).toFixed(1));
+function renderRows(){
+  let rows=D.measures.filter(m=>(!fmat||m.material===fmat)&&(!fshape||m.shape===fshape)&&(!fq||m.id.toLowerCase().includes(fq)));
+  const f=keyOf[sortK];
+  rows.sort((a,b)=>{const va=f(a),vb=f(b);return (va>vb?1:va<vb?-1:0)*sortD});
+  document.querySelectorAll('#phead th .ar').forEach(a=>a.textContent='');
+  const th=document.querySelector(`#phead th[data-k="${sortK}"] .ar`);
+  if(th)th.textContent=sortD>0?'▲':'▼';
+  $('#pbody').innerHTML=rows.map(m=>{
+    const share=(m.massG/totalMass*100);
+    return `<tr>
+      <td style="--dot:${matCol(m.material)}"><span class="id">${esc(m.id)}</span></td>
+      <td><span class="scell">${esc(m.shape)}</span></td>
+      <td><span class="mcell"><span class="sw2" style="background:${matCol(m.material)}"></span>${esc(m.material)}</span></td>
+      ${fmtDims(m.dims).map(d=>`<td class="num">${d}</td>`).join('')}
+      <td class="num">${Math.round(m.volMM3).toLocaleString()}</td>
+      <td class="num">${m.density.toLocaleString()}</td>
+      <td class="num barcell"><span class="bar" style="width:${(m.massG/Math.max(...D.measures.map(x=>x.massG))*100).toFixed(1)}%"></span>
+        <span class="v">${m.massG>=1000?(m.massG/1000).toFixed(2)+'kg':Math.round(m.massG)+'g'}</span></td>
+      <td class="num">${share.toFixed(1)}%</td></tr>`;
+  }).join('')||`<tr><td colspan="10" style="text-align:center;color:var(--dim);padding:20px">no parts match filters</td></tr>`;
+  const vis=rows.length;
+  $('#tcount').textContent=vis+' of '+D.measures.length+' rows';
+  $('#fmeta').innerHTML=`<b>${vis}</b> rows · Σ <b>${(rows.reduce((s,m)=>s+m.massG,0)/1000).toFixed(2)}</b> kg`;
+  $('#pfoot').innerHTML=`<tr><td>Σ ${vis} parts</td><td></td><td></td><td></td><td></td><td></td>
+    <td class="num">${Math.round(rows.reduce((s,m)=>s+m.volMM3,0)).toLocaleString()}</td><td></td>
+    <td class="num">${(rows.reduce((s,m)=>s+m.massG,0)/1000).toFixed(2)}kg</td><td class="num">100%</td></tr>`;
+}
+renderRows();
+
+/* ---- kpis ---- */
+$('#kpis').innerHTML=`
+  <div class="kpi"><span class="k">total mass</span><span class="v">${(totalMass/1000).toFixed(2)}<small> kg</small></span></div>
+  <div class="kpi"><span class="k">tip margin</span><span class="v ok">${stab?(+stab.measured).toFixed(1):'—'}<small> mm</small></span></div>
+  <div class="kpi"><span class="k">min clearance</span><span class="v">${checks.find(c=>c.name==='clearance')?(+checks.find(c=>c.name==='clearance').measured).toFixed(1):'—'}<small> mm</small></span></div>
+  <div class="kpi"><span class="k">eval time</span><span class="v">${D.report.timingMs.toFixed(1)}<small> ms</small></span></div>
+  <div class="kpi"><span class="k">attempts</span><span class="v">${D.attempts}</span></div>`;
+
+/* ---- checks mini ---- */
+$('#ckm').innerHTML=checks.map(c=>`
+  <div class="ckm"><span class="ci">${c.status==='pass'?'✓':'✗'}</span>
+    <span class="nm" title="${esc(c.detail)}">${esc(c.name)}</span>
+    ${c.measured?`<span class="mv">${(+c.measured).toFixed(2)}</span>`:''}
+    <span class="stcell ${c.status==='pass'?'ok':''}">${c.status.toUpperCase()}</span></div>`).join('');
+
+/* ---- ops table ---- */
+$('#obody').innerHTML=D.plan.map(op=>{
+  if(op.kind==='place'){
+    return `<tr><td class="num">${op.step}</td><td class="nm">place</td>
+      <td>${op.glyph} ${esc(op.part)}</td>
+      <td><span class="armtag ${op.arm==='A+B'?'B':op.arm}">${op.arm==='A+B'?'A+B':'ARM '+op.arm}</span></td>
+      <td class="num">${Math.round(op.massG)}</td>
+      <td class="dim">${v3(op.seat)}</td><td class="dim">${v3(op.insert_from)}</td></tr>`;
+  }
+  return `<tr><td class="num">·</td><td style="color:#8a3fd4">${esc(op.type)}</td>
+    <td style="color:var(--mut)">${esc(op.a)} ↔ ${esc(op.b)}</td>
+    <td><span class="armtag J">joint</span></td><td class="num">—</td>
+    <td class="dim">${v3(op.anchor)}</td><td class="dim">axis ${v3(op.axis)}</td></tr>`;
+}).join('');
+
+/* ---- log ---- */
+const logEl=$('#logbody');
+function logLine(t,cls){
+  const d=document.createElement('div');if(cls)d.className=cls;
+  d.innerHTML='<span class="t">'+new Date().toTimeString().slice(0,8)+' </span>'+esc(t);
+  logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;
+}
+D.log.forEach(l=>{let c='';if(/pass|✓|verified/i.test(l))c='g';else if(/▸/.test(l))c='c';else if(/…/.test(l))c='y';logLine(l,c)});
+
+/* ---- interactions ---- */
+const brief=$('#brief'),go=$('#go');
+function submit(){
+  const v=brief.value.trim();if(!v)return;
+  go.disabled=true;go.textContent='Queued…';
+  logLine('brief ▸ '+v,'c');logLine('designing…','y');
+  setTimeout(()=>{go.disabled=false;go.textContent='Submit & design'},1000);
+}
+go.addEventListener('click',submit);
+brief.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))submit()});
+let expl=false;
+$('#rimg').addEventListener('click',()=>{expl=!expl;$('#rimg').src=expl?'lamp_exploded.png':'lamp_flat.png'});
+document.querySelectorAll('.ritem').forEach(r=>r.addEventListener('click',()=>{
+  r.parentElement.querySelectorAll('.ritem').forEach(x=>x.classList.remove('on'));r.classList.add('on');
+}));
+</script>
+</body>
+</html>

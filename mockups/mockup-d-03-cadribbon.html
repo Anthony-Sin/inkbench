@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — CAD Workbench</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1700px; height: 900px; overflow: hidden; }
+  body {
+    background: #e8eaf0; color: #23262e;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px; display: flex; flex-direction: column;
+  }
+  .mono { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; }
+
+  /* ---------- app bar ---------- */
+  #appbar {
+    height: 34px; background: #1f2430; color: #cfd6e4; flex: none;
+    display: flex; align-items: center; padding: 0 14px; gap: 14px;
+  }
+  #appbar .gem {
+    width: 18px; height: 18px; background: linear-gradient(135deg,#5eead4,#2563eb);
+    border-radius: 4px; transform: rotate(45deg);
+  }
+  #appbar .file { font-size: 12.5px; } .file b { color: #fff; }
+  #appbar .qact { margin-left: 18px; display: flex; gap: 6px; }
+  #appbar .qact span {
+    width: 22px; height: 22px; border-radius: 3px; background: #2c3446;
+    display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer;
+  }
+  #appbar .qact span:hover { background: #3b4763; }
+  #appbar .right { margin-left: auto; font-size: 10.5px; color: #8a94ab; display: flex; gap: 16px; }
+  #appbar .right .ok { color: #6ee7b7; }
+
+  /* ---------- ribbon ---------- */
+  #ribbon { flex: none; background: #f5f6fa; border-bottom: 1px solid #c8cdd8; }
+  #tabs { display: flex; padding: 0 12px; gap: 2px; background: #e8eaf0; }
+  #tabs .tab {
+    padding: 8px 20px 7px; font-size: 12px; color: #4a5060; cursor: pointer;
+    border: 1px solid transparent; border-bottom: none; border-radius: 5px 5px 0 0;
+  }
+  #tabs .tab:hover { color: #1f2430; }
+  #tabs .tab.on { background: #f5f6fa; border-color: #c8cdd8; color: #1f2430; font-weight: 600; }
+  #ribbonBody { height: 86px; display: flex; align-items: stretch; padding: 8px 12px; gap: 0; }
+  .rgroup { display: flex; flex-direction: column; padding: 0 14px; border-right: 1px solid #d3d8e2; }
+  .rgroup:first-child { padding-left: 4px; }
+  .rgroup .items { display: flex; gap: 6px; flex: 1; align-items: center; }
+  .rgroup .glabel { font-size: 9.5px; color: #7a8194; text-align: center; letter-spacing: .1em; text-transform: uppercase; padding-top: 4px; }
+  .rbtn {
+    min-width: 58px; height: 56px; border: 1px solid transparent; border-radius: 5px;
+    background: none; cursor: pointer; font-family: inherit; color: #2a2f3a;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    font-size: 10.5px; padding: 4px 8px;
+  }
+  .rbtn:hover { background: #e2e8f5; border-color: #b6c2d8; }
+  .rbtn:active { background: #cdd9ef; }
+  .rbtn .big { font-size: 19px; line-height: 1; }
+  .rbtn .sw { width: 26px; height: 13px; border-radius: 3px; border: 1px solid rgba(0,0,0,.25); }
+  .rbtn .st { font-size: 9px; padding: 0 6px; border-radius: 7px; }
+  .stPass { background: #d3f5e3; color: #15803d; }
+  .stFail { background: #fde2e2; color: #b91c1c; }
+  .armchip { font-size: 9px; padding: 0 6px; border-radius: 7px; border: 1px solid; }
+  .aA { color: #0369a1; border-color: #0369a1; } .aB { color: #be185d; border-color: #be185d; }
+
+  /* ---------- workspace ---------- */
+  #ws { flex: 1; display: grid; grid-template-columns: 264px 1fr; min-height: 0; }
+
+  /* browser tree */
+  #browser { background: #f0f2f7; border-right: 1px solid #c8cdd8; display: flex; flex-direction: column; }
+  #browser .bhead { padding: 9px 12px; font-size: 10.5px; letter-spacing: .12em; color: #5a6274; border-bottom: 1px solid #d3d8e2; text-transform: uppercase; }
+  #browser .bsearch { margin: 8px 10px; padding: 5px 9px; border: 1px solid #c8cdd8; border-radius: 4px; background: #fff; color: #7a8194; font-size: 11px; }
+  #treeB { flex: 1; overflow: auto; padding: 4px 8px 12px; font-size: 12px; }
+  .bn { padding: 3px 6px; border-radius: 3px; cursor: pointer; display: flex; gap: 7px; align-items: center; white-space: nowrap; }
+  .bn:hover { background: #dde4f2; } .bn.sel { background: #c9d8f5; }
+  .bn .tw { color: #64748b; font-size: 10px; width: 12px; }
+  .bn .mt { margin-left: auto; font-size: 9.5px; color: #8a94ab; }
+  .bsep { font-size: 9.5px; letter-spacing: .1em; color: #8a94ab; margin: 10px 4px 3px; text-transform: uppercase; }
+
+  /* graphics area */
+  #gfx {
+    position: relative; overflow: hidden;
+    background:
+      radial-gradient(ellipse at 50% 40%, #fdfdff 0%, #dfe5f0 55%, #c4ccdd 100%);
+  }
+  #gfx .grid {
+    position: absolute; left: 0; right: 0; bottom: 60px; height: 150px;
+    background-image: linear-gradient(rgba(70,90,130,.18) 1px, transparent 1px);
+    background-size: 100% 15px;
+    transform: perspective(420px) rotateX(62deg); transform-origin: bottom;
+    mask-image: linear-gradient(to top, black 30%, transparent);
+    -webkit-mask-image: linear-gradient(to top, black 30%, transparent);
+  }
+  #gfx img {
+    position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
+    height: 92%;
+    filter: drop-shadow(0 18px 24px rgba(30,45,80,.3));
+  }
+  .viewcube {
+    position: absolute; top: 14px; right: 16px; width: 74px; height: 74px;
+    background: rgba(255,255,255,.75); border: 1px solid #b6c2d8; border-radius: 6px;
+    font-size: 9px; color: #4a5568; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 2px; backdrop-filter: blur(4px);
+  }
+  .docchip {
+    position: absolute; top: 14px; left: 16px; background: rgba(255,255,255,.8);
+    border: 1px solid #b6c2d8; border-radius: 5px; padding: 7px 12px; font-size: 11px;
+    color: #374151; backdrop-filter: blur(4px);
+  }
+  .docchip b { color: #1f2430; }
+  #briefDock {
+    position: absolute; left: 16px; bottom: 18px; width: 400px;
+    background: rgba(255,255,255,.88); border: 1px solid #b6c2d8; border-radius: 6px;
+    padding: 10px 12px; backdrop-filter: blur(5px);
+  }
+  #briefDock .bl { font-size: 9.5px; letter-spacing: .14em; color: #2563eb; text-transform: uppercase; margin-bottom: 5px; }
+  #briefDock .row { display: flex; gap: 7px; }
+  #briefDock input {
+    flex: 1; border: 1px solid #b6c2d8; border-radius: 4px; padding: 6px 9px;
+    font-size: 12px; outline: none; font-family: inherit; color: #1f2430;
+  }
+  #briefDock input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.18); }
+  #briefDock button {
+    background: #2563eb; color: #fff; border: none; border-radius: 4px;
+    padding: 0 15px; font-size: 11.5px; cursor: pointer; font-family: inherit;
+  }
+  #briefDock button:hover { background: #1d4ed8; }
+  #verifyDock {
+    position: absolute; right: 16px; bottom: 18px; width: 340px;
+    background: rgba(255,255,255,.88); border: 1px solid #b6c2d8; border-radius: 6px;
+    padding: 9px 12px; backdrop-filter: blur(5px); font-size: 10.5px;
+  }
+  #verifyDock .vr { display: flex; justify-content: space-between; padding: 2px 0; color: #4a5568; }
+  #verifyDock .vr b { color: #15803d; font-weight: 600; }
+
+  /* ---------- status bar ---------- */
+  #statusbar {
+    height: 26px; flex: none; background: #1f2430; color: #aeb8cc;
+    display: flex; align-items: center; padding: 0 14px; gap: 20px; font-size: 10.5px;
+  }
+  #statusbar .ok { color: #6ee7b7; }
+  #statusbar .sp { flex: 1; }
+  #statusbar .cell { border-left: 1px solid #37415a; padding-left: 20px; }
+</style>
+</head>
+<body>
+  <div id="appbar">
+    <span class="gem"></span>
+    <span class="file"><b>INKBENCH</b> · desklamp.ink</span>
+    <div class="qact"><span title="save">💾</span><span title="undo">↩</span><span title="redo">↪</span><span title="re-verify">✓</span></div>
+    <div class="right"><span id="abFig"></span><span class="ok" id="abPass"></span><span>units: <b id="abUnits" style="color:#fff"></b></span></div>
+  </div>
+
+  <div id="ribbon">
+    <div id="tabs"></div>
+    <div id="ribbonBody"></div>
+  </div>
+
+  <div id="ws">
+    <div id="browser">
+      <div class="bhead">Model Browser</div>
+      <div class="bsearch">🔍 filter parts / joints…</div>
+      <div id="treeB"></div>
+    </div>
+    <div id="gfx">
+      <div class="grid"></div>
+      <div class="docchip" id="docChip"></div>
+      <img src="lamp_flat.png" alt="model render">
+      <div class="viewcube"><svg width="40" height="40" viewBox="0 0 40 40"><g transform="translate(20,20)" stroke="#4a5568" fill="none"><path d="M0,-14 L12,-7 L12,7 L0,14 L-12,7 L-12,-7 Z"/><path d="M0,-14 L0,0 M-12,-7 L0,0 M12,-7 L0,0 M0,0 L0,14"/></g></svg>ISO</div>
+      <div id="briefDock">
+        <div class="bl">Brief → LLM Spec</div>
+        <div class="row"><input id="briefIn" spellcheck="false"><button id="briefBtn">Build ▸</button></div>
+      </div>
+      <div id="verifyDock"></div>
+    </div>
+  </div>
+
+  <div id="statusbar">
+    <span id="stMsg">ready</span>
+    <span class="sp"></span>
+    <span id="stPos" class="mono"></span>
+    <span class="cell" id="stMass"></span>
+    <span class="cell" id="stTime"></span>
+    <span class="cell ok" id="stPass"></span>
+  </div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  const D = window.DATA, $ = s => document.querySelector(s);
+  const fmtSize = s => Array.isArray(s) ? s.join('×') : ('⌀' + (s.r*2) + '×' + s.h);
+  const shapeIco = s => ({cylinder:'◯', box:'▭', cone:'△'}[s] || '◇');
+
+  $('#abFig').textContent = 'fig ' + D.figures[0].figNum + ' — ' + D.figures[0].name;
+  $('#abPass').textContent = D.report.pass ? '● VERIFIED' : '● FAILED';
+  $('#abUnits').textContent = D.spec.units;
+  $('#docChip').innerHTML = '<b>' + D.spec.name + '</b> · ' + D.spec.parts.length + ' parts · ' + D.spec.joints.length + ' joints · attempt ' + D.attempts;
+
+  /* ---------- ribbon tabs ---------- */
+  const TABS = {
+    'Model': () =>
+      group('Material', Object.entries(D.spec.materials).map(([k,m]) =>
+        btn('<span class="sw" style="background:' + m.color + '"></span>' , k, m.density + ' kg/m³')).join('')) +
+      group('Primitives', D.spec.parts.map(p =>
+        btn('<span class="big">' + shapeIco(p.shape) + '</span>', p.shape, p.id)).join('')) +
+      group('Tests', btn('<span class="big">⇄</span>', 'clear ' + D.spec.tests.min_clearance_mm + 'mm','min clearance') +
+                     btn('<span class="big">∠</span>', 'tip ' + D.spec.tests.max_tip_angle_deg + '°','max tip angle')),
+    'Inspect': () =>
+      group('Verification', D.report.checks.map(c =>
+        '<button class="rbtn" title="' + c.detail.replace(/"/g,'&quot;') + '"><span class="big">' + (c.status==='pass'?'✓':'✗') + '</span>' + c.name +
+        '<span class="st ' + (c.status==='pass'?'stPass':'stFail') + '">' + c.status.toUpperCase() + '</span></button>').join('')) +
+      group('Measures', D.measures.map(m =>
+        '<button class="rbtn" title="' + m.dims.map(d=>d.toFixed(1)).join(' × ') + ' mm"><span class="big">📏</span>' + m.id + '<span class="st" style="background:#e2e8f0;color:#334155">' + m.massG.toFixed(0) + ' g</span></button>').join('')),
+    'Assemble': () =>
+      group('Joints', D.spec.joints.map(j =>
+        '<button class="rbtn" title="anchor (' + j.anchor.join(', ') + ') axis (' + j.axis.join(', ') + ')"><span class="big">⚿</span>' + j.a + '~' + j.b + '<span class="st" style="background:#eef2ff;color:#4338ca">' + j.type + '</span></button>').join('')) +
+      group('Insert order', D.spec.assembly.map((a,i) =>
+        btn('<span class="big">' + (i+1) + '</span>', a.part, 'from (' + a.insert_from.join(',') + ')')).join('')),
+    'Build': () =>
+      group('Two-arm plan', D.plan.filter(s=>s.kind==='place').map(s =>
+        '<button class="rbtn" title="seat (' + s.seat.join(', ') + ')"><span class="big">' + s.glyph + '</span>' + s.step + ' · ' + s.part +
+        '<span class="armchip ' + (s.arm==='A'?'aA':'aB') + '">ARM ' + s.arm + '</span></button>').join('')) +
+      group('Joint ops', D.plan.filter(s=>s.kind==='joint').map(s =>
+        btn('<span class="big">⚿</span>', s.type, s.a + '~' + s.b)).join(''))
+  };
+  function group(label, items){ return '<div class="rgroup"><div class="items">' + items + '</div><div class="glabel">' + label + '</div></div>'; }
+  function btn(big, label, tip){ return '<button class="rbtn" title="' + (tip||'') + '">' + big + '<span>' + label + '</span></button>'; }
+
+  const tabNames = Object.keys(TABS);
+  $('#tabs').innerHTML = tabNames.map((t,i) => '<div class="tab' + (i===0?' on':'') + '" data-t="' + t + '">' + t + '</div>').join('');
+  function showTab(t){ $('#ribbonBody').innerHTML = TABS[t](); }
+  showTab('Model');
+  $('#tabs').addEventListener('click', e => {
+    const t = e.target.closest('.tab'); if (!t) return;
+    document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on'); showTab(t.dataset.t);
+    $('#stMsg').textContent = 'ribbon ▸ ' + t.dataset.t.toLowerCase();
+  });
+
+  /* ---------- browser tree ---------- */
+  let tb = '<div class="bn sel"><span class="tw">▾</span><b>' + D.spec.name + '</b><span class="mt">' + D.spec.units + '</span></div>';
+  tb += '<div class="bsep">Parts · ' + D.spec.parts.length + '</div>';
+  D.spec.parts.forEach(p => {
+    tb += '<div class="bn" style="padding-left:22px"><span class="tw">' + shapeIco(p.shape) + '</span>' + p.id + '<span class="mt">' + fmtSize(p.size) + '</span></div>';
+  });
+  tb += '<div class="bsep">Joints · ' + D.spec.joints.length + '</div>';
+  D.spec.joints.forEach(j => {
+    tb += '<div class="bn" style="padding-left:22px"><span class="tw">⚿</span>' + j.a + '~' + j.b + '<span class="mt">' + j.type + '</span></div>';
+  });
+  tb += '<div class="bsep">Renders</div>';
+  tb += '<div class="bn" style="padding-left:22px"><span class="tw">▦</span>lamp_flat.png<span class="mt">fig ' + D.figures[0].figNum + '</span></div>';
+  tb += '<div class="bn" style="padding-left:22px"><span class="tw">▦</span>lamp_exploded.png<span class="mt">75%</span></div>';
+  $('#treeB').innerHTML = tb;
+  $('#treeB').addEventListener('click', e => {
+    const n = e.target.closest('.bn'); if (!n) return;
+    document.querySelectorAll('#treeB .bn').forEach(x=>x.classList.remove('sel'));
+    n.classList.add('sel');
+    $('#stMsg').textContent = 'selected ▸ ' + n.textContent.trim();
+  });
+
+  /* ---------- verify dock ---------- */
+  $('#verifyDock').innerHTML =
+    '<div class="vr"><b>' + (D.report.pass ? '✓ ALL CHECKS PASS' : '✗ FAILURES') + '</b><span>' + D.report.timingMs + ' ms</span></div>' +
+    D.report.checks.map(c => '<div class="vr" title="' + c.detail.replace(/"/g,'&quot;') + '"><span>' + c.name + '</span><span style="color:' + (c.status==='pass'?'#15803d':'#b91c1c') + '">' + (c.measured ? c.measured.toFixed(1) : c.status) + '</span></div>').join('');
+
+  /* ---------- status bar ---------- */
+  const totalMass = D.measures.reduce((a,m)=>a+m.massG,0);
+  $('#stPos').textContent = '0.00, 0.00, 0.00';
+  $('#stMass').textContent = 'Σ ' + (totalMass/1000).toFixed(3) + ' kg';
+  $('#stTime').textContent = 'verify ' + D.report.timingMs + 'ms · attempt ' + D.attempts;
+  $('#stPass').textContent = D.report.pass ? '● PASS ' + D.report.checks.length + '/' + D.report.checks.length : '● FAIL';
+  $('#gfx').addEventListener('mousemove', e => {
+    const r = $('#gfx').getBoundingClientRect();
+    $('#stPos').textContent = ((e.clientX-r.left)/4).toFixed(1) + ', ' + ((e.clientY-r.top)/4).toFixed(1) + ', 0.0';
+  });
+
+  /* ---------- brief ---------- */
+  $('#briefIn').value = D.brief;
+  $('#briefBtn').onclick = () => { $('#stMsg').textContent = 'brief ▸ ' + $('#briefIn').value; };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Quad Viewport</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1700px; height: 900px; overflow: hidden; }
+  body {
+    background: #23252a; color: #c9cdd6;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px; display: grid;
+    grid-template-columns: 230px 1fr; grid-template-rows: 1fr 132px;
+    grid-template-areas: "rail panes" "rail outliner";
+  }
+  .mono { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; }
+
+  /* ---------- left rail ---------- */
+  #rail {
+    grid-area: rail; background: #1c1e22; border-right: 1px solid #101114;
+    display: flex; flex-direction: column; overflow: hidden auto;
+  }
+  #rail::-webkit-scrollbar { width: 8px; } #rail::-webkit-scrollbar-thumb { background: #34373e; }
+  .brand { padding: 14px 16px 10px; border-bottom: 1px solid #101114; }
+  .brand .n { font-size: 15px; font-weight: 700; color: #eef0f4; letter-spacing: .12em; }
+  .brand .s { font-size: 9.5px; color: #6b7280; letter-spacing: .2em; margin-top: 2px; }
+  .rsec { padding: 12px 14px; border-bottom: 1px solid #101114; }
+  .rsec h5 { font-size: 9.5px; letter-spacing: .22em; color: #7dd3fc; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+  #rail input {
+    width: 100%; background: #101114; border: 1px solid #34373e; border-radius: 3px;
+    color: #e5e7eb; font-size: 11px; padding: 7px 9px; outline: none; font-family: inherit;
+  }
+  #rail input:focus { border-color: #7dd3fc; }
+  #rail button {
+    width: 100%; margin-top: 7px; background: #0369a1; border: none; color: #fff;
+    font-size: 11px; padding: 7px 0; border-radius: 3px; cursor: pointer; font-family: inherit;
+  }
+  #rail button:hover { background: #0284c7; }
+  #briefEcho { font-size: 10.5px; color: #8b919e; line-height: 1.5; margin-top: 8px; font-style: italic; }
+  .mini { display: flex; justify-content: space-between; font-size: 10.5px; padding: 3px 0; color: #9aa0ab; }
+  .mini .v { color: #e5e7eb; font-family: ui-monospace, Menlo, monospace; font-size: 10px; }
+  .chkline { display: flex; gap: 7px; align-items: center; font-size: 11px; padding: 3.5px 0; cursor: default; }
+  .chkline:hover { background: #26292f; }
+  .chkline .d { width: 7px; height: 7px; border-radius: 50%; background: #34d399; flex: none; }
+  .chkline .d.f { background: #f87171; }
+  .chkline .t { color: #b9bec9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chkline .m { margin-left: auto; font-size: 9.5px; color: #6b7280; font-family: ui-monospace, Menlo, monospace; }
+  #logTail { font-size: 9.5px; line-height: 1.7; color: #6b7280; font-family: ui-monospace, Menlo, monospace; }
+  #logTail div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #logTail div:last-child { color: #7dd3fc; }
+
+  /* ---------- quad panes ---------- */
+  #panes {
+    grid-area: panes; display: grid; grid-template-columns: 1.55fr 1fr; grid-template-rows: 1fr 1fr;
+    gap: 2px; background: #101114; min-height: 0;
+  }
+  .pane {
+    position: relative; overflow: hidden; background: #2a2d33;
+    outline: 1px solid transparent; outline-offset: -1px; transition: outline-color .15s;
+  }
+  .pane:hover { outline-color: #7dd3fc; z-index: 2; }
+  .pane .pgrid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+  .pane .plabel {
+    position: absolute; top: 9px; left: 11px; font-size: 10px; letter-spacing: .24em;
+    color: #7dd3fc; text-transform: uppercase; z-index: 3; display: flex; gap: 10px; align-items: center;
+    text-shadow: 0 1px 4px #000;
+  }
+  .pane .plabel .dim { color: #6b7280; letter-spacing: .1em; font-size: 9px; }
+  .pane .pview { position: absolute; top: 9px; right: 11px; font-size: 9px; color: #565b66; z-index: 3; letter-spacing: .1em; }
+  .pane img.fit {
+    position: absolute; inset: 0; margin: auto; max-height: 100%; max-width: 100%;
+    object-fit: contain; padding: 30px 12px 12px;
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,.5));
+  }
+  .pane .crop { position: absolute; inset: 0; background-repeat: no-repeat; }
+  .pane .axes { position: absolute; left: 12px; bottom: 10px; z-index: 3; }
+  .pane .frame { position: absolute; border: 1px dashed rgba(125,211,252,.35); pointer-events: none; z-index: 2; }
+  /* crop configs: same render, ortho-style bands */
+  .cTop   { background-image: url('lamp_exploded.png'); background-size: 340% auto; background-position: 50% 4%; }
+  .cFront { background-image: url('lamp_flat.png');     background-size: 300% auto; background-position: 50% 42%; }
+  .cRight { background-image: url('lamp_flat.png');     background-size: 340% auto; background-position: 50% 88%; }
+
+  /* ---------- outliner strip ---------- */
+  #outliner {
+    grid-area: outliner; background: #1c1e22; border-top: 1px solid #101114;
+    display: flex; flex-direction: column; padding: 10px 14px; overflow: hidden;
+  }
+  #outliner .ohead {
+    display: flex; align-items: center; gap: 14px; font-size: 9.5px;
+    letter-spacing: .22em; color: #6b7280; text-transform: uppercase; margin-bottom: 8px;
+  }
+  #outliner .ohead .st { margin-left: auto; color: #6ee7b7; letter-spacing: .12em; }
+  #orow { display: flex; gap: 10px; flex: 1; min-height: 0; }
+  .ocard {
+    flex: 1; border: 1px solid #34373e; border-radius: 4px; background: #23252a;
+    display: flex; align-items: center; gap: 10px; padding: 0 12px; cursor: pointer;
+    position: relative; min-width: 0;
+  }
+  .ocard:hover { border-color: #7dd3fc; background: #272a30; }
+  .ocard .sw { width: 30px; height: 30px; border-radius: 4px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #1c1e22; }
+  .ocard .nm { font-size: 11.5px; color: #e5e7eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ocard .mt { font-size: 9.5px; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ocard .step { position: absolute; top: -1px; right: -1px; font-size: 8.5px; background: #0369a1; color: #fff; padding: 1.5px 7px; border-radius: 0 4px 0 4px; }
+  .ocard .armB { background: #9d174d; }
+  .osep { width: 1px; background: #34373e; margin: 12px 0; flex: none; }
+  .ostat { flex: none; width: 250px; display: flex; flex-direction: column; justify-content: center; font-size: 10px; color: #6b7280; line-height: 1.7; }
+  .ostat .v { color: #c9cdd6; font-family: ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+  <div id="rail">
+    <div class="brand"><div class="n">INKBENCH</div><div class="s">QUAD VIEWPORT</div></div>
+    <div class="rsec">
+      <h5>Brief</h5>
+      <input id="briefIn" spellcheck="false">
+      <button id="briefBtn">▸ Generate spec</button>
+      <div id="briefEcho"></div>
+    </div>
+    <div class="rsec">
+      <h5>Verification</h5>
+      <div id="checks"></div>
+    </div>
+    <div class="rsec">
+      <h5>Spec</h5>
+      <div id="specMini"></div>
+    </div>
+    <div class="rsec" style="flex:1">
+      <h5>Agent log</h5>
+      <div id="logTail"></div>
+    </div>
+  </div>
+
+  <div id="panes">
+    <div class="pane" style="grid-row: span 2">
+      <div class="pgrid"></div>
+      <div class="plabel">Perspective · ISO <span class="dim">assembled render</span></div>
+      <div class="pview">cam 35mm · toon</div>
+      <img class="fit" src="lamp_flat.png" alt="iso view">
+      <div class="axes"><svg width="46" height="46"><g transform="translate(23,23)" stroke-width="1.6"><line x1="0" y1="0" x2="17" y2="0" stroke="#f87171"/><line x1="0" y1="0" x2="0" y2="-17" stroke="#34d399"/><line x1="0" y1="0" x2="-11" y2="9" stroke="#60a5fa"/></g></svg></div>
+    </div>
+    <div class="pane">
+      <div class="crop cTop"></div>
+      <div class="plabel">Top <span class="dim">Z+</span></div>
+      <div class="pview">ortho · exploded</div>
+      <div class="axes"><svg width="34" height="34"><g transform="translate(17,17)" stroke-width="1.6"><line x1="0" y1="0" x2="13" y2="0" stroke="#f87171"/><line x1="0" y1="0" x2="0" y2="-13" stroke="#34d399"/></g></svg></div>
+    </div>
+    <div class="pane">
+      <div class="crop cFront"></div>
+      <div class="plabel">Front <span class="dim">Y−</span></div>
+      <div class="pview">ortho · shaded</div>
+      <div class="axes"><svg width="34" height="34"><g transform="translate(17,17)" stroke-width="1.6"><line x1="0" y1="0" x2="13" y2="0" stroke="#f87171"/><line x1="0" y1="0" x2="0" y2="-13" stroke="#60a5fa"/></g></svg></div>
+    </div>
+    <!-- fourth pane shares right column: split horizontally via extra pane -->
+  </div>
+
+  <div id="outliner">
+    <div class="ohead"><span>Outliner — build order</span><span id="oMeta"></span><span class="st" id="oPass"></span></div>
+    <div id="orow"></div>
+  </div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  const D = window.DATA, $ = s => document.querySelector(s);
+  const fmtSize = s => Array.isArray(s) ? s.join('×') : ('⌀' + (s.r*2) + '×' + s.h);
+  const shapeIco = s => ({cylinder:'●', box:'■', cone:'▲'}[s] || '◆');
+
+  /* add the 4th pane (Right ortho) beside Front: make right column 3 rows? — keep 4-pane quad:
+     reorganize: TL iso spans 2 rows; right column splits into TOP, FRONT, RIGHT via sub-grid */
+  const panes = $('#panes');
+  panes.style.gridTemplateRows = '1fr 1fr 1fr';
+  panes.querySelector('.pane:first-child').style.gridRow = 'span 3';
+  // insert right ortho pane
+  const rp = document.createElement('div');
+  rp.className = 'pane';
+  rp.innerHTML = '<div class="crop cRight"></div>' +
+    '<div class="plabel">Right <span class="dim">X+ · base zone</span></div>' +
+    '<div class="pview">ortho · shaded</div>' +
+    '<div class="axes"><svg width="34" height="34"><g transform="translate(17,17)" stroke-width="1.6"><line x1="0" y1="0" x2="13" y2="0" stroke="#34d399"/><line x1="0" y1="0" x2="0" y2="-13" stroke="#60a5fa"/></g></svg></div>';
+  panes.appendChild(rp);
+  // label the iso pane's span correctly (it was span 2 -> span 3 covers all)
+
+  /* rail: brief */
+  $('#briefIn').value = D.brief;
+  $('#briefEcho').textContent = '“' + D.brief + '”';
+  $('#briefBtn').onclick = () => { $('#logTail').innerHTML += '<div>brief ▸ ' + $('#briefIn').value + '</div>'; };
+
+  /* rail: checks */
+  $('#checks').innerHTML = D.report.checks.map(c =>
+    '<div class="chkline" title="' + c.detail.replace(/"/g,'&quot;') + '">' +
+    '<span class="d' + (c.status==='pass'?'':' f') + '"></span><span class="t">' + c.name + '</span>' +
+    '<span class="m">' + (c.measured ? c.measured.toFixed(1) : '—') + '</span></div>').join('');
+
+  /* rail: spec mini */
+  $('#specMini').innerHTML =
+    '<div class="mini"><span>name</span><span class="v">' + D.spec.name + '</span></div>' +
+    '<div class="mini"><span>parts / joints</span><span class="v">' + D.spec.parts.length + ' / ' + D.spec.joints.length + '</span></div>' +
+    '<div class="mini"><span>units</span><span class="v">' + D.spec.units + '</span></div>' +
+    '<div class="mini"><span>materials</span><span class="v">' + Object.keys(D.spec.materials).join(', ') + '</span></div>' +
+    '<div class="mini"><span>total mass</span><span class="v">' + (D.measures.reduce((a,m)=>a+m.massG,0)/1000).toFixed(2) + ' kg</span></div>' +
+    '<div class="mini"><span>verify</span><span class="v">' + D.report.timingMs + ' ms</span></div>';
+
+  /* rail: log */
+  $('#logTail').innerHTML = D.log.map(l => '<div>' + l + '</div>').join('');
+
+  /* outliner cards = places in plan order + joints info + stats */
+  const places = D.plan.filter(s => s.kind === 'place');
+  $('#oMeta').textContent = places.length + ' placements · ' + D.plan.filter(s=>s.kind==='joint').length + ' joint ops';
+  $('#oPass').textContent = D.report.pass ? '● PASS · attempt ' + D.attempts : '● FAIL';
+  let html = '';
+  places.forEach(s => {
+    const m = D.measures.find(x => x.id === s.part);
+    const col = D.spec.materials[m.material].color;
+    html += '<div class="ocard" title="seat (' + s.seat.join(', ') + ') insert (' + s.insert_from.join(', ') + ')">' +
+      '<span class="step' + (s.arm==='B'?' armB':'') + '">' + s.step + ' · ARM ' + s.arm + '</span>' +
+      '<span class="sw" style="background:' + col + '">' + shapeIco(m.shape) + '</span>' +
+      '<span style="min-width:0"><div class="nm">' + s.part + '</div><div class="mt">' + m.shape + ' · ' + fmtSize(D.spec.parts.find(p=>p.id===s.part).size) + ' · ' + m.massG.toFixed(0) + 'g</div></span>' +
+      '</div>';
+  });
+  html += '<div class="osep"></div>';
+  html += '<div class="ostat"><span>joints</span><span class="v">' + D.spec.joints.map(j => j.a + '~' + j.b + ' (' + j.type.slice(0,3) + ')').join('<br>') + '</span></div>';
+  $('#orow').innerHTML = html;
+})();
+</script>
+</body>
+</html>

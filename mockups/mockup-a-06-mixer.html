@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Mixing Console</title>
+<style>
+  :root{
+    --deck:#26262b; --deck2:#2e2e34; --strip:#1d1d22; --edge:#101014;
+    --cream:#e8e2d2; --amber:#ffb454; --red:#ff5348; --grn:#4ade80;
+    --sans:"Helvetica Neue",Arial,system-ui,sans-serif;
+    --mono:"SF Mono",ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden;background:#191a1e;color:var(--cream);
+    font-family:var(--sans);font-size:12px}
+  .console{height:100vh;display:grid;grid-template-rows:52px 1fr 64px;padding:10px;gap:10px;
+    background:linear-gradient(#232328,#1b1b1f)}
+
+  header{display:flex;align-items:center;gap:16px;padding:0 16px;background:linear-gradient(#33333a,#26262b);
+    border:1px solid var(--edge);border-radius:6px;box-shadow:inset 0 1px 0 #ffffff10}
+  .brand{font-family:var(--mono);font-size:15px;letter-spacing:.3em;font-weight:700}
+  .brand small{display:block;font-size:8px;color:#8a8a92;letter-spacing:.22em;font-weight:400}
+  .tb{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .tb .lab{font-family:var(--mono);font-size:9px;letter-spacing:.25em;color:#8a8a92}
+  .tb input{width:380px;background:#131316;border:1px solid #000;border-radius:4px;color:var(--cream);
+    font-family:var(--mono);font-size:11px;padding:7px 12px}
+  .tb input:focus{outline:none;border-color:var(--amber)}
+  .tb button{background:linear-gradient(#4a4a52,#33333a);color:var(--amber);border:1px solid #000;border-radius:4px;
+    font-family:var(--mono);font-size:10px;letter-spacing:.2em;padding:7px 16px;cursor:pointer}
+  .tb button:hover{box-shadow:0 0 10px #ffb45444}
+  .tb button:active{transform:translateY(1px)}
+  .vlamp{width:10px;height:10px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn)}
+
+  main{display:flex;gap:8px;min-height:0}
+  /* channel strips */
+  .strip{width:118px;flex:none;background:linear-gradient(#232328,#1a1a1f);border:1px solid var(--edge);
+    border-radius:4px;display:flex;flex-direction:column;align-items:center;padding:8px 6px;gap:7px;
+    box-shadow:inset 0 1px 0 #ffffff10}
+  .scribble{width:92%;background:var(--cream);color:#2a2620;font-family:"Comic Sans MS","Segoe Print",cursive;
+    font-size:11px;text-align:center;padding:3px 0;border-radius:2px;transform:rotate(-.6deg);box-shadow:0 1px 3px #0007}
+  .knobline{display:flex;gap:6px}
+  .dknob{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .dknob .k{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#4a4a52,#1a1a1f 70%);
+    border:1px solid #000;position:relative;box-shadow:0 2px 4px #0008}
+  .dknob .k i{position:absolute;left:50%;top:2px;width:2px;height:9px;background:var(--cream);transform-origin:50% 11px}
+  .dknob span{font-family:var(--mono);font-size:7px;color:#8a8a92;letter-spacing:.05em}
+  .meter{display:flex;gap:2px;height:64px;align-items:flex-end}
+  .meter .seg{width:9px;display:flex;flex-direction:column-reverse;gap:1.5px}
+  .meter .seg i{height:4px;background:#3a3a42;border-radius:1px}
+  .meter .seg i.on.g{background:#4ade80;box-shadow:0 0 3px #4ade8088}
+  .meter .seg i.on.y{background:#ffcf5a;box-shadow:0 0 3px #ffcf5a88}
+  .meter .seg i.on.r{background:#ff5348;box-shadow:0 0 3px #ff534888}
+  .mval{font-family:var(--mono);font-size:8.5px;color:#8a8a92}
+  .faderwrap{flex:1;width:100%;position:relative;display:flex;justify-content:center;min-height:60px}
+  .ftrack{width:4px;height:100%;background:#0c0c0f;border-radius:2px;box-shadow:inset 0 0 3px #000;position:relative}
+  .ftrack:before{content:"";position:absolute;left:-14px;top:0;bottom:0;width:32px;
+    background:repeating-linear-gradient(0deg,transparent 0 9%,#ffffff18 9% 10%);pointer-events:none}
+  .fthumb{position:absolute;left:50%;transform:translate(-50%,-50%);width:38px;height:18px;border-radius:3px;
+    background:linear-gradient(#3c3c44,#232328);border:1px solid #000;box-shadow:0 3px 5px #0009;cursor:grab}
+  .fthumb i{position:absolute;left:4px;right:4px;top:50%;height:2px;margin-top:-1px}
+  .fval{font-family:var(--mono);font-size:8.5px;color:#8a8a92}
+  .onbtn{width:60%;padding:3px 0;text-align:center;font-family:var(--mono);font-size:8px;letter-spacing:.2em;
+    background:#3a2f14;color:var(--amber);border:1px solid #000;border-radius:2px;cursor:pointer;box-shadow:inset 0 0 8px #ffb45433}
+  .onbtn.off{background:#1c1c20;color:#55555e;box-shadow:none}
+
+  /* monitor section */
+  .monitor{flex:1;background:linear-gradient(#232328,#1a1a1f);border:1px solid var(--edge);border-radius:4px;
+    display:flex;flex-direction:column;padding:10px;gap:8px;min-width:0}
+  .mtitle{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:#8a8a92;display:flex;justify-content:space-between}
+  .screen{flex:1;position:relative;background:#101013;border-radius:4px;overflow:hidden;min-height:0}
+  .screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .screen img.top{transition:opacity .15s linear}
+  .screen .tag{position:absolute;top:8px;left:8px;font-family:var(--mono);font-size:9px;background:#000a;
+    color:var(--grn);padding:3px 9px;border-radius:2px;letter-spacing:.15em}
+  .xrow{display:flex;align-items:center;gap:12px}
+  .xrow .lab{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:#8a8a92}
+  .xsl{flex:1;position:relative;height:26px}
+  .xsl .tr{position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;background:#0c0c0f;border-radius:2px;
+    box-shadow:inset 0 0 3px #000}
+  .xsl .th{position:absolute;top:50%;width:44px;height:20px;transform:translate(-50%,-50%);border-radius:3px;
+    background:linear-gradient(#4a4a52,#2a2a30);border:1px solid #000;cursor:grab;box-shadow:0 3px 6px #0009}
+  .xsl .th i{position:absolute;top:3px;bottom:3px;left:50%;width:2px;background:var(--amber);transform:translateX(-50%)}
+  .xv{font-family:var(--mono);font-size:10px;color:var(--amber);width:44px;text-align:right}
+
+  /* master section */
+  .master{width:190px;flex:none;background:linear-gradient(#2b2b31,#1e1e23);border:1px solid var(--edge);
+    border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .vubox{width:100%;height:56px;background:linear-gradient(#f2e9d2,#ddd2b5);border:2px solid #14140f;
+    border-radius:4px;position:relative;overflow:hidden}
+  .vubox .arc{position:absolute;inset:0}
+  .vubox .ndl{position:absolute;left:50%;bottom:-8px;width:1.5px;height:66px;background:#a02c20;transform-origin:bottom center}
+  .vubox .cp{position:absolute;left:50%;bottom:-9px;width:14px;height:14px;border-radius:50%;background:#2b2b31;transform:translateX(-50%)}
+  .vul{font-family:var(--mono);font-size:7.5px;color:#8a8a92;letter-spacing:.15em;text-align:center}
+  .buslist{width:100%;display:flex;flex-direction:column;gap:4px;flex:1;overflow:auto;min-height:0}
+  .bus{display:flex;align-items:center;gap:7px;background:#141417;border:1px solid #000;border-radius:3px;padding:5px 8px}
+  .bus .bl{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 6px var(--grn)}
+  .bus .bn{font-family:var(--mono);font-size:8.5px;color:var(--cream);flex:1;letter-spacing:.08em}
+  .bus .bv{font-family:var(--mono);font-size:8px;color:#8a8a92}
+  .mlabel{font-family:var(--mono);font-size:8px;letter-spacing:.3em;color:#8a8a92;border-top:1px solid #000;width:100%;text-align:center;padding-top:6px}
+
+  /* log strip */
+  footer{background:linear-gradient(#232328,#1a1a1f);border:1px solid var(--edge);border-radius:4px;
+    display:flex;align-items:center;gap:14px;padding:0 14px;overflow:hidden}
+  footer .lt{font-family:var(--mono);font-size:8px;letter-spacing:.3em;color:#8a8a92;flex:none}
+  .ltape{flex:1;overflow:auto;display:flex;gap:0;max-height:44px;flex-wrap:wrap;align-content:flex-start}
+  .ltape div{font-family:var(--mono);font-size:9.5px;color:#9a9aa4;padding:2px 12px 2px 0;white-space:nowrap}
+  .ltape div b{color:var(--grn);font-weight:400}
+</style>
+</head>
+<body>
+<div class="console">
+  <header>
+    <span class="vlamp"></span>
+    <div class="brand">INKBENCH · 1608<small>DESIGN MIXDOWN CONSOLE — AGENTIC CAD</small></div>
+    <div class="tb">
+      <span class="lab">TALKBACK / BRIEF</span>
+      <input id="brief" spellcheck="false">
+      <button id="talk">TALK ▸</button>
+    </div>
+  </header>
+  <main id="main">
+    <!-- strips injected before monitor -->
+    <div class="monitor">
+      <div class="mtitle">PROGRAM MONITOR — ASSEMBLY <span id="xlab">EXPLODE 0%</span></div>
+      <div class="screen">
+        <img src="lamp_flat.png" alt="flat">
+        <img class="top" id="expl" src="lamp_exploded.png" alt="exploded" style="opacity:0">
+        <span class="tag" id="scrtag"></span>
+      </div>
+      <div class="xrow">
+        <span class="lab">FLAT</span>
+        <div class="xsl" id="xsl"><div class="tr"></div><div class="th" id="xth"><i></i></div></div>
+        <span class="lab">EXPLODE</span>
+        <span class="xv" id="xv">0%</span>
+      </div>
+    </div>
+    <div class="master">
+      <div class="mtitle" style="justify-content:center">MASTER</div>
+      <div class="vubox"><div class="arc" id="vu1"></div><div class="ndl" id="n1"></div><div class="cp"></div></div>
+      <div class="vul">BUS L · MASS kg</div>
+      <div class="vubox"><div class="arc" id="vu2"></div><div class="ndl" id="n2"></div><div class="cp"></div></div>
+      <div class="vul">BUS R · TIP-MARGIN mm</div>
+      <div class="buslist" id="busses"></div>
+      <div class="mlabel">VERIFY BUSSES</div>
+    </div>
+  </main>
+  <footer>
+    <span class="lt">SESSION LOG</span>
+    <div class="ltape" id="log"></div>
+    <span class="lt" id="stamp" style="color:var(--amber)"></span>
+  </footer>
+</div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA;
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const f1=v=>(+v).toFixed(1),f2=v=>(+v).toFixed(2);
+const dimStr=p=>p.shape==='box'?p.size.join('·'):`⌀${p.size.r*2}·${p.size.h}`;
+const totalMass=D.measures.reduce((s,m)=>s+m.massG,0);
+const stab=D.report.checks.find(c=>c.name==='stability');
+const clr=D.report.checks.find(c=>c.name==='clearance');
+const maxM=Math.max(...D.measures.map(m=>m.massG));
+
+/* build channel strips before .monitor */
+const main=document.getElementById('main');
+const monitor=main.querySelector('.monitor');
+const segN=12;
+const knobMax=[100,220,220];
+const f0=v=>Math.round(v);
+D.spec.parts.forEach((p,i)=>{
+  const ms=D.measures.find(x=>x.id===p.id);
+  const mt=D.spec.materials[p.material];
+  const lvl=ms.massG/maxM;                              // 0..1
+  const lit=Math.max(2,Math.round(lvl*segN));           // LED segments
+  const fpos=100-Math.sqrt(lvl)*72;                     // fader % from top
+  const knobs=[p.size.r?f0(p.size.r):p.size[0], p.size.r?f0(p.size.h):p.size[1], p.shape==='box'?p.size[2]:'—'];
+  const st=document.createElement('div');st.className='strip';
+  st.innerHTML=`
+    <div class="scribble">${esc(p.id)}</div>
+    <div class="knobline">${knobs.map((v,k)=>`<div class="dknob"><div class="k"><i style="transform:translateX(-50%) rotate(${-120+((v/knobMax[k])||0)*240}deg)"></i></div><span>${['W','H','D'][k]} ${v}</span></div>`).join('')}</div>
+    <div class="meter">${[0,1].map(()=>`<div class="seg">${Array.from({length:segN},(_,s)=>{
+      const on=s<lit;const cls=s>9?'r':s>7?'y':'g';
+      return `<i class="${on?'on '+cls:''}"></i>`;}).join('')}</div>`).join('')}</div>
+    <div class="mval">${f1(ms.massG)}g</div>
+    <div class="faderwrap"><div class="ftrack"></div>
+      <div class="fthumb" style="top:${fpos}%"><i style="background:${mt.color}"></i></div></div>
+    <div class="fval">${dimStr(p)}mm</div>
+    <button class="onbtn">ON · ${p.material.slice(0,4).toUpperCase()}</button>`;
+  main.insertBefore(st,monitor);
+});
+
+/* on buttons toggle */
+document.querySelectorAll('.onbtn').forEach(b=>b.onclick=()=>b.classList.toggle('off'));
+
+/* master VUs */
+function vu(el,ndl,frac){
+  el.innerHTML=`<svg width="100%" height="100%" viewBox="0 0 100 56" preserveAspectRatio="none">
+    <path d="M 8 50 A 44 44 0 0 1 92 50" fill="none" stroke="#8a7f66" stroke-width="1"/>
+    <path d="M ${92-14} 30 A 44 44 0 0 1 92 50" fill="none" stroke="#b03a2a" stroke-width="3"/>
+    ${[-40,-20,0,20,40].map(a=>{const t=(a-90)*Math.PI/180;
+      return `<line x1="${50+40*Math.cos(t)}" y1="${50+40*Math.sin(t)}" x2="${50+46*Math.cos(t)}" y2="${50+46*Math.sin(t)}" stroke="#6a5f4a" stroke-width="1"/>`;}).join('')}
+    </svg>`;
+  ndl.style.transform=`rotate(${-42+Math.min(1,Math.max(0,frac))*84}deg)`;
+}
+vu(document.getElementById('vu1'),document.getElementById('n1'),totalMass/6500);
+vu(document.getElementById('vu2'),document.getElementById('n2'),stab.measured/110);
+
+/* busses = checks + plan arm assignment */
+document.getElementById('busses').innerHTML=
+  D.report.checks.map(c=>`<div class="bus"><span class="bl" style="${c.status!=='pass'?'background:var(--red);box-shadow:0 0 6px var(--red)':''}"></span>
+    <span class="bn">${esc(c.name.toUpperCase())}</span><span class="bv">${c.measured?f2(c.measured):'OK'}</span></div>`).join('')
+  +`<div class="bus" style="border-color:#ffb45455"><span class="bl" style="background:var(--amber);box-shadow:0 0 6px var(--amber)"></span>
+    <span class="bn">ARMS ${D.plan.filter(p=>p.kind==='place').map(p=>p.arm+':'+p.part).join(' · ')}</span></div>`;
+
+/* explode slider */
+const xs=document.getElementById('xsl'),th=document.getElementById('xth'),
+      ex=document.getElementById('expl'),xv=document.getElementById('xv'),xl=document.getElementById('xlab');
+let pct=0;
+function setX(p){pct=Math.min(100,Math.max(0,p));
+  th.style.left=pct+'%';ex.style.opacity=(pct/100*.95).toFixed(2);
+  xv.textContent=Math.round(pct)+'%';xl.textContent='EXPLODE '+Math.round(pct)+'%';}
+setX(0);
+let drag=false;
+const toP=e=>{const r=xs.getBoundingClientRect();return (e.clientX-r.left)/r.width*100;};
+xs.addEventListener('pointerdown',e=>{drag=true;setX(toP(e));xs.setPointerCapture(e.pointerId);});
+xs.addEventListener('pointermove',e=>{if(drag)setX(toP(e));});
+xs.addEventListener('pointerup',()=>drag=false);
+
+/* header + log */
+document.getElementById('scrtag').textContent='PGM — '+D.spec.name.toUpperCase();
+const bi=document.getElementById('brief');bi.value=D.brief;
+document.getElementById('talk').onclick=()=>bi.focus();
+document.getElementById('log').innerHTML=D.log.map((l,i)=>
+  `<div><b>${String(i).padStart(2,'0')}</b> ${esc(l)}</div>`).join('');
+document.getElementById('stamp').textContent=D.report.pass?'■ MIXDOWN PASS · '+f1(D.report.timingMs)+'ms':'■ FAIL';
+</script>
+</body>
+</html>

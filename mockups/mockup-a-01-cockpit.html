@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Cockpit</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#171c22; --panel2:#1d232b; --edge:#2b333d;
+    --amber:#ffb454; --amber-dim:#8a6432; --green:#5fd97a; --red:#ff5348;
+    --ink:#c9d1d9; --dim:#68727e; --mono:"SF Mono",ui-monospace,"Cascadia Mono","JetBrains Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--mono);font-size:12px}
+  .deck{height:100vh;display:grid;grid-template-rows:52px 64px 1fr 132px;gap:8px;padding:10px;background:
+    radial-gradient(1200px 500px at 50% -10%,#1a212a 0%,var(--bg) 60%)}
+
+  /* ===== header ===== */
+  header{display:flex;align-items:center;gap:18px;padding:0 18px;background:linear-gradient(#20262e,#161b21);
+    border:1px solid var(--edge);border-radius:8px;box-shadow:inset 0 1px 0 #ffffff12}
+  .brand{font-size:17px;font-weight:700;letter-spacing:.35em;color:var(--amber)}
+  .brand small{letter-spacing:.2em;color:var(--dim);font-weight:400;font-size:10px;display:block}
+  .hgroup{margin-left:auto;display:flex;gap:22px;align-items:center}
+  .hcell{text-align:right}
+  .hcell .l{font-size:9px;letter-spacing:.25em;color:var(--dim)}
+  .hcell .v{font-size:15px;color:var(--ink)}
+  .master-status{padding:6px 14px;border-radius:4px;font-weight:700;letter-spacing:.25em;font-size:13px;
+    background:#123019;color:var(--green);border:1px solid #2a5a39;box-shadow:0 0 18px #5fd97a33,inset 0 0 8px #5fd97a22}
+
+  /* ===== annunciator strip ===== */
+  .annun{display:grid;grid-template-columns:repeat(5,1fr) 2fr;gap:8px}
+  .lamp{display:flex;align-items:center;justify-content:center;gap:10px;border-radius:6px;
+    background:linear-gradient(#141920,#10141a);border:1px solid var(--edge);position:relative;overflow:hidden}
+  .lamp .dot{width:10px;height:10px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 10px var(--green),0 0 22px #5fd97a66}
+  .lamp .t{font-size:10px;letter-spacing:.18em;color:#a8f0ba;font-weight:700}
+  .lamp.pass{background:linear-gradient(#16301d,#101a12);border-color:#2a5a39}
+  .lamp .tag{position:absolute;top:4px;right:8px;font-size:8px;color:var(--dim);letter-spacing:.2em}
+  .hdg{display:flex;align-items:center;gap:14px;padding:0 16px;border-radius:6px;background:linear-gradient(#141920,#10141a);border:1px solid var(--edge)}
+  .hdg .l{font-size:9px;color:var(--dim);letter-spacing:.2em}
+  .hdg .v{color:var(--amber);font-size:14px;letter-spacing:.1em}
+
+  /* ===== main ===== */
+  main{display:grid;grid-template-columns:322px 1fr 380px;gap:8px;min-height:0}
+  .col{display:flex;flex-direction:column;gap:8px;min-height:0}
+  .mod{background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:12px;position:relative;
+    box-shadow:inset 0 1px 0 #ffffff0a}
+  .mtitle{font-size:9px;letter-spacing:.3em;color:var(--dim);margin-bottom:10px;display:flex;justify-content:space-between}
+  .mtitle b{color:var(--amber);font-weight:600}
+
+  /* gauges */
+  .gauge{display:flex;flex-direction:column;align-items:center;padding:6px 0 2px}
+  .gauge svg{width:150px;height:96px;overflow:visible}
+  .gface{fill:none}
+  .glabel{font-size:9px;letter-spacing:.22em;color:var(--dim);margin-top:2px}
+  .gval{font-size:16px;color:var(--amber);letter-spacing:.05em}
+
+  /* spec manifest */
+  .spec{flex:1;overflow:auto;min-height:0}
+  .specrow{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;padding:5px 6px;border-bottom:1px solid #ffffff08}
+  .specrow:hover{background:#ffffff08}
+  .sw{width:10px;height:10px;border-radius:2px;border:1px solid #0008}
+  .specrow .nm{color:var(--ink)}
+  .specrow .dm{color:var(--dim);font-size:10px}
+  .spechead{font-size:9px;color:var(--dim);letter-spacing:.2em;padding:4px 6px;border-bottom:1px solid var(--edge)}
+
+  /* viewport */
+  .pfd{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .screen{flex:1;position:relative;border-radius:6px;overflow:hidden;background:#e9e4d8;min-height:0;
+    border:1px solid #000;box-shadow:inset 0 0 60px #00000033}
+  .screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .hud{position:absolute;inset:0;pointer-events:none}
+  .hud .corner{position:absolute;width:22px;height:22px;border:2px solid #0a0a0a66}
+  .hud .tl{top:10px;left:10px;border-right:0;border-bottom:0}
+  .hud .tr{top:10px;right:10px;border-left:0;border-bottom:0}
+  .hud .bl{bottom:10px;left:10px;border-right:0;border-top:0}
+  .hud .br{bottom:10px;right:10px;border-left:0;border-top:0}
+  .hud .ret{position:absolute;top:50%;left:50%;width:120px;height:120px;transform:translate(-50%,-50%);
+    border:1px dashed #0a0a0a4d;border-radius:50%}
+  .osd{position:absolute;font-size:10px;letter-spacing:.15em;background:#10141acc;padding:2px 8px;border-radius:3px;color:var(--green)}
+  .osd.a{top:12px;left:40px}
+  .osd.b{bottom:12px;right:40px;color:var(--amber)}
+
+  /* flight plan */
+  .planlist{flex:1;overflow:auto;min-height:0}
+  .leg{display:grid;grid-template-columns:30px 34px 1fr auto;gap:8px;align-items:center;
+    padding:6px 8px;border-bottom:1px solid #ffffff08}
+  .leg:hover{background:#ffffff08}
+  .leg.joint{opacity:.75}
+  .seq{color:var(--amber);font-size:13px;font-weight:700}
+  .armchip{font-size:9px;text-align:center;padding:3px 0;border-radius:3px;letter-spacing:.1em;font-weight:700}
+  .armA{background:#1c3350;color:#7ab8ff;border:1px solid #2e5077}
+  .armB{background:#3a2418;color:#ffab60;border:1px solid #6a4426}
+  .armAB{background:#2c1c3f;color:#c89aff;border:1px solid #503878}
+  .armJ{background:#18251c;color:#7fd997;border:1px solid #2c4a38}
+  .leg .act{color:var(--ink)}
+  .leg .act small{display:block;color:var(--dim);font-size:9px;margin-top:1px}
+  .leg .gl{color:var(--green);font-size:14px;text-align:right}
+
+  /* bottom: CDU + log */
+  footer{display:grid;grid-template-columns:1fr 460px;gap:8px;min-height:0}
+  .cdu{display:flex;flex-direction:column;gap:8px}
+  .cdu .row{display:flex;gap:8px;flex:1}
+  .cdu input{flex:1;background:#0a0d11;border:1px solid var(--edge);border-radius:5px;color:var(--amber);
+    font-family:var(--mono);font-size:14px;padding:0 14px;letter-spacing:.04em;caret-color:var(--amber)}
+  .cdu input:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 2px #ffb45433}
+  .key{background:linear-gradient(#3a424c,#23282f);border:1px solid #000;border-radius:5px;color:#dfe6ee;
+    font-family:var(--mono);font-size:11px;letter-spacing:.15em;padding:0 22px;cursor:pointer;
+    box-shadow:0 2px 0 #000,inset 0 1px 0 #ffffff22}
+  .key:hover{background:linear-gradient(#454f5b,#282e36)}
+  .key:active{transform:translateY(2px);box-shadow:0 0 0 #000,inset 0 1px 0 #ffffff22}
+  .key.exec{color:var(--green)}
+  .logtape{overflow:auto;background:#0a0d11;border:1px solid var(--edge);border-radius:6px;padding:8px 12px;min-height:0}
+  .logtape div{white-space:nowrap;color:#8b94a0;padding:1.5px 0}
+  .logtape div:last-child{color:var(--green)}
+  .logtape .ts{color:#48505a;margin-right:10px}
+</style>
+</head>
+<body>
+<div class="deck">
+  <header>
+    <div class="brand">INKBENCH<small>AGENTIC CAD WORKBENCH · FLT-DECK UI</small></div>
+    <div class="hgroup" id="hcells"></div>
+    <div class="master-status" id="mstatus"></div>
+  </header>
+  <div class="annun" id="annun"></div>
+  <main>
+    <div class="col">
+      <div class="mod" id="gauges" style="padding-top:8px"></div>
+      <div class="mod spec">
+        <div class="mtitle">PART MANIFEST <b id="pcount"></b></div>
+        <div class="spechead" style="display:grid;grid-template-columns:14px 1fr auto;gap:8px"><span></span><span>PART · MAT</span><span>SIZE mm</span></div>
+        <div id="specrows"></div>
+      </div>
+    </div>
+    <div class="mod pfd">
+      <div class="mtitle">VISION FEED — ASSEMBLED MODEL <b>CAM·1 · 560×956</b></div>
+      <div class="screen">
+        <img src="lamp_flat.png" alt="render">
+        <div class="hud">
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="corner bl"></div><div class="corner br"></div>
+          <div class="ret"></div>
+        </div>
+        <div class="osd a" id="osd1"></div>
+        <div class="osd b" id="osd2"></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="mod" style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <div class="mtitle">BUILD PLAN — TWO-ARM SEQ <b id="legcount"></b></div>
+        <div class="planlist" id="plan"></div>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <div class="mod cdu">
+      <div class="mtitle">CDU — DESIGN BRIEF INPUT <b>READY</b></div>
+      <div class="row">
+        <input id="brief" spellcheck="false">
+        <button class="key" id="clrBtn">CLR</button>
+        <button class="key exec" id="execBtn">EXEC ▸</button>
+      </div>
+    </div>
+    <div class="logtape" id="log"></div>
+  </footer>
+</div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA;
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const f1=v=>(+v).toFixed(1), f2=v=>(+v).toFixed(2);
+const dimStr=p=>p.shape==='box'?p.size.join('×'):`⌀${p.size.r*2}×${p.size.h}`;
+const totalMass=D.measures.reduce((s,m)=>s+m.massG,0);
+const stab=D.report.checks.find(c=>c.name==='stability');
+const clr=D.report.checks.find(c=>c.name==='clearance');
+
+/* header cells */
+document.getElementById('hcells').innerHTML=[
+  ['MODEL',esc(D.spec.name.toUpperCase())],
+  ['PARTS / JOINTS',D.spec.parts.length+' / '+D.spec.joints.length],
+  ['TOTAL MASS',f1(totalMass/1000)+' kg'],
+  ['ATTEMPTS',D.attempts],
+  ['VERIFY T',f1(D.report.timingMs)+' ms'],
+].map(([l,v])=>`<div class="hcell"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+const ms=document.getElementById('mstatus');
+ms.textContent=D.report.pass?'■ VERIFIED':'■ FAILED';
+ms.style.background=D.report.pass?'#123019':'#3a1414';
+ms.style.color=D.report.pass?'var(--green)':'var(--red)';
+
+/* annunciators */
+document.getElementById('annun').innerHTML=
+  D.report.checks.map(c=>`
+    <div class="lamp ${c.status==='pass'?'pass':''}">
+      <span class="tag">${c.status==='pass'?'NORM':'ABND'}</span>
+      <span class="dot" style="${c.status!=='pass'?'background:var(--red);box-shadow:0 0 10px var(--red)':''}"></span>
+      <span class="t">${esc(c.name.toUpperCase())}</span>
+    </div>`).join('')
+  +`<div class="hdg"><span class="l">TIP-MARGIN</span><span class="v">${f2(stab.measured)} mm</span>
+     <span class="l" style="margin-left:auto">MIN-CLR</span><span class="v">${f2(clr.measured)} mm</span></div>`;
+
+/* gauges — SVG dial: value -> needle angle over 240° sweep */
+function dial(label,val,min,max,unit,redMax){
+  const cx=75,cy=72,r=56;
+  const a=v=>-120+(v-min)/(max-min)*240; // deg from 12 o'clock
+  const pol=(deg,rr)=>{const t=(deg-90)*Math.PI/180;return [cx+rr*Math.cos(t),cy+rr*Math.sin(t)];};
+  const arc=(v0,v1,rr)=>{const[x0,y0]=pol(a(v0),rr),[x1,y1]=pol(a(v1),rr);const big=(v1-v0)/(max-min)*240>180?1:0;
+    return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${rr} ${rr} 0 ${big} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;};
+  let ticks='';
+  for(let i=0;i<=8;i++){const v=min+(max-min)*i/8;const[x0,y0]=pol(a(v),r),[x1,y1]=pol(a(v),r-7);
+    ticks+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#5a6470" stroke-width="1.5"/>`;}
+  const[ex,ey]=pol(a(Math.min(Math.max(val,min),max)),r-16);
+  return `<div class="gauge">
+    <svg viewBox="0 0 150 96">
+      ${redMax?`<path d="${arc(min,redMax,r-3)}" stroke="#ff5348" stroke-width="4" fill="none" opacity=".8"/>`:''}
+      <path d="${arc(min,max,r-3)}" stroke="#2b333d" stroke-width="4" fill="none"/>
+      <path d="${arc(min,Math.min(Math.max(val,min),max),r-3)}" stroke="#ffb454" stroke-width="4" fill="none"/>
+      ${ticks}
+      <line x1="${cx}" y1="${cy}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#ffb454" stroke-width="2.5"/>
+      <circle cx="${cx}" cy="${cy}" r="5" fill="#2b333d" stroke="#ffb454"/>
+      <text x="${cx}" y="${cy-58}" text-anchor="middle" fill="#68727e" font-size="8">${unit}</text>
+    </svg>
+    <div class="gval">${unit==='kg'?f2(val/1000):f1(val)}<span style="font-size:10px;color:var(--dim)"> ${unit}</span></div>
+    <div class="glabel">${label}</div>
+  </div>`;
+}
+document.getElementById('gauges').innerHTML=
+  dial('TOTAL MASS',totalMass,0,6500,'kg')+
+  dial('TIP MARGIN',stab.measured,0,110,'mm')+
+  dial('MIN CLEARANCE',clr.measured,0,20,'mm',D.spec.tests.min_clearance_mm);
+
+/* spec manifest */
+document.getElementById('pcount').textContent=D.spec.parts.length+' P/N';
+document.getElementById('specrows').innerHTML=D.spec.parts.map(p=>{
+  const m=D.spec.materials[p.material];
+  const ms=D.measures.find(x=>x.id===p.id);
+  return `<div class="specrow">
+    <span class="sw" style="background:${m.color}"></span>
+    <span class="nm">${esc(p.id)}<span class="dm"> · ${p.material} · ${f1(ms.massG)}g</span></span>
+    <span class="dm">${dimStr(p)}</span></div>`;}).join('');
+
+/* plan legs */
+const legs=D.plan.map((p,i)=>{
+  if(p.kind==='place'){
+    return `<div class="leg"><span class="seq">${String(p.step).padStart(2,'0')}</span>
+      <span class="armchip arm${p.arm==='A+B'?'AB':p.arm}">ARM ${p.arm}</span>
+      <span class="act">PLACE ${esc(p.part)}<small>seat ${p.seat.map(v=>f1(v)).join(', ')} · ${f1(p.massG)}g</small></span>
+      <span class="gl">${p.glyph}</span></div>`;
+  }
+  return `<div class="leg joint"><span class="seq">·</span>
+    <span class="armchip armJ">JNT</span>
+    <span class="act">${esc(p.type)} ${esc(p.a)}→${esc(p.b)}<small>axis ${p.axis.join(',')} @ ${p.anchor.map(v=>f1(v)).join(', ')}${p.late?' · LATE':''}</small></span>
+    <span class="gl">⚿</span></div>`;
+}).join('');
+document.getElementById('plan').innerHTML=legs;
+document.getElementById('legcount').textContent=D.plan.length+' LEGS';
+
+/* OSD + CDU + log */
+document.getElementById('osd1').textContent='● LIVE — '+D.spec.name.toUpperCase();
+document.getElementById('osd2').textContent='CoM '+(stab.detail.match(/CoM=\(([^)]*)\)/)||[])[1]+' mm';
+const bi=document.getElementById('brief'); bi.value=D.brief;
+document.getElementById('clrBtn').onclick=()=>{bi.value='';bi.focus();};
+document.getElementById('execBtn').onclick=()=>{const t=document.getElementById('log');const d=document.createElement('div');
+  d.innerHTML='<span class="ts">EXEC</span>brief ▸ '+esc(bi.value);t.appendChild(d);t.scrollTop=t.scrollHeight;};
+document.getElementById('log').innerHTML=D.log.map((l,i)=>
+  `<div><span class="ts">${String(i).padStart(2,'0')}:${String(i*7%60).padStart(2,'0')}</span>${esc(l)}</div>`).join('');
+document.getElementById('log').scrollTop=1e6;
+</script>
+</body>
+</html>

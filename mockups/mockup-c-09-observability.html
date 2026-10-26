@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1700">
+<title>Desk lamp — Verification wall — inkbench</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1013; --panel:#16181d; --panel2:#1c1f26;
+  --line:#262a32; --line2:#343945;
+  --txt:#d8d9da; --mut:#8b919d; --dim:#5f6570;
+  --green:#73bf69; --red:#f2495c; --yellow:#f2cc0c; --blue:#5794f2; --orange:#ff9830; --purple:#b877d9;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--txt);overflow:hidden;display:flex;flex-direction:column;
+  font:13px/1.45 "Inter",-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit;color:inherit}
+:focus-visible{outline:1.5px solid var(--blue);outline-offset:1px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#333947;border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- dashboard header ---------- */
+#head{height:46px;flex:0 0 46px;display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{width:22px;height:22px;border-radius:50%;background:conic-gradient(var(--orange),var(--red),var(--orange));
+  display:grid;place-items:center;color:#000;font-size:11px;font-weight:800}
+.crumbs{display:flex;align-items:center;gap:8px;font-size:14px}
+.crumbs .g{color:var(--mut)}
+.crumbs b{font-weight:650}
+.crumbs .tag{font:500 10.5px var(--mono);color:var(--blue);background:rgba(87,148,242,.12);
+  border:1px solid rgba(87,148,242,.3);border-radius:4px;padding:2px 6px}
+#head .r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tpick{display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border:1px solid var(--line2);
+  border-radius:5px;background:var(--panel2);color:var(--mut);font-size:12.5px;transition:all .13s}
+.tpick:hover{border-color:#4a5060;color:var(--txt)}
+.tpick .ic{color:var(--dim)}
+.icbtn{width:30px;height:30px;border:1px solid var(--line2);border-radius:5px;background:var(--panel2);
+  color:var(--mut);display:grid;place-items:center;font-size:13px;transition:all .13s}
+.icbtn:hover{border-color:#4a5060;color:var(--txt)}
+.pribtn{height:30px;padding:0 13px;border-radius:5px;background:var(--blue);color:#0b0e14;font-weight:600;
+  font-size:12.5px;transition:filter .13s}
+.pribtn:hover{filter:brightness(1.12)}
+.pribtn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ---------- dashboard grid ---------- */
+#dash{flex:1;min-height:0;display:grid;gap:10px;padding:10px;
+  grid-template-columns:repeat(12,1fr);grid-template-rows:140px 296px 1fr}
+.pn{background:var(--panel);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;
+  min-height:0;overflow:hidden;position:relative}
+.pn:hover{border-color:#3a404c}
+.pnh{height:30px;flex:0 0 30px;display:flex;align-items:center;gap:8px;padding:0 10px;
+  font-size:11.5px;font-weight:600;color:var(--mut);cursor:move;user-select:none}
+.pnh .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pnh .mi{color:var(--dim);opacity:0;transition:opacity .12s;font-size:13px;letter-spacing:1px}
+.pn:hover .pnh .mi{opacity:1}
+.pnb{flex:1;min-height:0;padding:6px 12px 10px;position:relative;display:flex;flex-direction:column}
+
+/* stat panels */
+.st-verdict{grid-column:1/3}.st-mass{grid-column:3/5}.st-time{grid-column:5/7}
+.statv{flex:1;display:flex;flex-direction:column;justify-content:center}
+.statv .big{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.statv .big.g{color:var(--green)}
+.statv .sub{font-size:11px;color:var(--mut);margin-top:6px}
+.statv .spark{position:absolute;right:10px;bottom:10px;opacity:.8}
+
+/* status cells */
+.st-cells{grid-column:7/13}
+.cells{flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:5px;align-content:center;padding-bottom:2px}
+.cell{border-radius:4px;padding:8px 10px;display:flex;flex-direction:column;justify-content:center;
+  background:rgba(115,191,105,.16);border:1px solid rgba(115,191,105,.35);cursor:default;transition:all .13s;min-width:0}
+.cell:hover{background:rgba(115,191,105,.26)}
+.cell .cs{font:600 9px var(--mono);color:var(--green);letter-spacing:.05em}
+.cell .cn{font-size:11.5px;font-weight:600;color:var(--txt);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell .cv{font:10px var(--mono);color:var(--mut);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* clearance chart */
+.p-chart{grid-column:1/8}
+.p-gauge{grid-column:8/10}
+.p-bars{grid-column:10/13}
+svg text{font-family:"Inter",sans-serif}
+
+/* bar gauge */
+.bgrow{display:flex;flex-direction:column;gap:3px;margin-bottom:9px}
+.bgrow .bl{display:flex;justify-content:space-between;font-size:11px}
+.bgrow .bl .id{color:var(--txt)}
+.bgrow .bl .v{font-family:var(--mono);color:var(--mut);font-size:10.5px}
+.bgtrack{height:13px;border-radius:3px;background:#232730;position:relative;overflow:hidden}
+.bgfill{height:100%;border-radius:3px;background:linear-gradient(90deg,rgba(87,148,242,.35),var(--blue))}
+.bgfill.hot{background:linear-gradient(90deg,rgba(242,153,74,.35),var(--orange))}
+.bgtick{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.25)}
+
+/* plan table */
+.p-plan{grid-column:1/4}
+.p-img{grid-column:4/6}
+.p-logs{grid-column:6/10}
+.p-brief{grid-column:10/13}
+table.tb{width:100%;border-collapse:collapse;font-size:11.5px}
+.tb th{text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);
+  padding:5px 8px;border-bottom:1px solid var(--line2)}
+.tb td{padding:5.5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tb tr:last-child td{border-bottom:0}
+.tb tbody tr:hover{background:rgba(87,148,242,.07)}
+.tb .num{font-family:var(--mono);text-align:right;color:var(--mut);font-size:10.5px}
+.tb .nm{font-weight:550}
+.armt{font:600 9.5px var(--mono);border-radius:3px;padding:1.5px 6px}
+.armt.A{background:rgba(87,148,242,.15);color:var(--blue)}
+.armt.B{background:rgba(184,119,217,.15);color:var(--purple)}
+.armt.AB{background:rgba(255,152,48,.15);color:var(--orange)}
+.jty{font:10px var(--mono);color:var(--dim);border:1px dashed var(--line2);border-radius:3px;padding:1px 5px}
+
+/* logs */
+#logs{flex:1;overflow-y:auto;font:10.8px/1.8 var(--mono);color:var(--mut)}
+#logs .r{display:flex;gap:10px;white-space:nowrap}
+#logs .r:hover{background:rgba(255,255,255,.03)}
+#logs .ts{color:var(--dim);flex:0 0 62px}
+#logs .lv{flex:0 0 40px;font-weight:600}
+#logs .lv.info{color:var(--blue)}#logs .lv.ok{color:var(--green)}#logs .lv.warn{color:var(--yellow)}
+#logs .ms{overflow:hidden;text-overflow:ellipsis}
+
+/* brief panel */
+#bwrap{flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center}
+#bwrap .lab{font-size:11px;color:var(--mut)}
+#brief{width:100%;height:34px;background:#0c0e12;border:1px solid var(--line2);border-radius:5px;
+  padding:0 10px;font-size:12.5px;transition:border-color .13s}
+#brief::placeholder{color:var(--dim)}
+#brief:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(87,148,242,.2)}
+#brow{display:flex;align-items:center;gap:8px}
+#go{height:30px;padding:0 14px;border-radius:5px;background:var(--blue);color:#0b0e14;font-weight:600;font-size:12px;transition:filter .13s}
+#go:hover{filter:brightness(1.12)}
+#go:disabled{opacity:.5;cursor:not-allowed}
+#bmeta{font:10px var(--mono);color:var(--dim)}
+.kvs{margin-top:2px;font-size:11px;color:var(--mut);display:grid;grid-template-columns:auto 1fr;gap:3px 10px}
+.kvs b{font-weight:500;color:var(--txt);font-family:var(--mono);font-size:10.5px;text-align:right}
+</style>
+</head>
+<body>
+
+<div id="head">
+  <div class="logo">◉</div>
+  <div class="crumbs">
+    <span class="g">Dashboards</span><span class="g">/</span>
+    <b>inkbench / figures</b><span class="g">/</span>
+    <b id="dtitle"></b>
+    <span class="tag" id="dtag"></span>
+  </div>
+  <div class="r">
+    <button class="tpick"><span class="ic">◷</span> Last 30 minutes <span style="color:var(--dim)">⌄</span></button>
+    <button class="icbtn" id="refresh" title="Refresh">⟳</button>
+    <button class="icbtn" title="Dashboard settings">⚙</button>
+    <button class="pribtn" id="newb">+ New brief</button>
+  </div>
+</div>
+
+<div id="dash">
+  <!-- stat: verdict -->
+  <div class="pn st-verdict"><div class="pnh"><span class="t">Verdict</span><span class="mi">⋮</span></div>
+    <div class="pnb"><div class="statv">
+      <div class="big g" id="vbig"></div>
+      <div class="sub" id="vsub"></div>
+    </div><svg class="spark" id="spark1" width="90" height="26"></svg></div>
+  </div>
+  <!-- stat: mass -->
+  <div class="pn st-mass"><div class="pnh"><span class="t">Total mass</span><span class="mi">⋮</span></div>
+    <div class="pnb"><div class="statv">
+      <div class="big" id="mbig" style="color:var(--blue)"></div>
+      <div class="sub" id="msub"></div>
+    </div><svg class="spark" id="spark2" width="90" height="26"></svg></div>
+  </div>
+  <!-- stat: eval -->
+  <div class="pn st-time"><div class="pnh"><span class="t">Eval time</span><span class="mi">⋮</span></div>
+    <div class="pnb"><div class="statv">
+      <div class="big" id="tbig" style="color:var(--yellow)"></div>
+      <div class="sub" id="tsub"></div>
+    </div></div>
+  </div>
+  <!-- status cells -->
+  <div class="pn st-cells"><div class="pnh"><span class="t">Check status — geometric verification</span><span class="mi">⋮</span></div>
+    <div class="pnb"><div class="cells" id="cells"></div></div>
+  </div>
+
+  <!-- clearance timeseries -->
+  <div class="pn p-chart"><div class="pnh"><span class="t">Joint clearances — mm</span><span class="mi">⋮</span></div>
+    <div class="pnb" style="padding:4px 8px 6px"><svg id="chart" width="100%" height="100%" preserveAspectRatio="none"></svg></div>
+  </div>
+  <!-- tip gauge -->
+  <div class="pn p-gauge"><div class="pnh"><span class="t">Tip margin mm</span><span class="mi">⋮</span></div>
+    <div class="pnb" style="align-items:center;justify-content:center"><svg id="gauge" width="150" height="100"></svg>
+      <div id="gval" style="font:600 20px var(--mono);color:var(--green);margin-top:-24px"></div>
+      <div style="font-size:10px;color:var(--dim)">support hull dist</div></div>
+  </div>
+  <!-- mass bar gauge -->
+  <div class="pn p-bars"><div class="pnh"><span class="t">Mass by part — g</span><span class="mi">⋮</span></div>
+    <div class="pnb scr" style="overflow-y:auto" id="bars"></div>
+  </div>
+
+  <!-- plan table -->
+  <div class="pn p-plan"><div class="pnh"><span class="t">Build plan — arm assignment</span><span class="mi">⋮</span></div>
+    <div class="pnb" style="overflow-y:auto;padding:4px 0 8px"><table class="tb">
+      <thead><tr><th>#</th><th>op</th><th>target</th><th>arm</th><th style="text-align:right">mass/seat</th></tr></thead>
+      <tbody id="plantb"></tbody></table></div>
+  </div>
+  <!-- render image -->
+  <div class="pn p-img"><div class="pnh"><span class="t">Render — toon</span><span class="mi">⋮</span></div>
+    <div class="pnb" id="imgbody" style="display:grid;place-items:center;padding:8px;background:
+      radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:14px 14px">
+      <img src="lamp_flat.png" alt="toon render" id="rimg" title="click for exploded"
+        style="max-height:100%;max-width:100%;border:1px solid var(--line2);border-radius:5px;cursor:pointer">
+    </div>
+  </div>
+  <!-- logs -->
+  <div class="pn p-logs"><div class="pnh"><span class="t">Agent logs — inkbench</span><span class="mi">⋮</span></div>
+    <div class="pnb" style="padding:6px 0"><div id="logs"></div></div>
+  </div>
+  <!-- brief + thresholds -->
+  <div class="pn p-brief"><div class="pnh"><span class="t">Brief input & thresholds</span><span class="mi">⋮</span></div>
+    <div class="pnb" id="bwrap">
+      <span class="lab">brief</span>
+      <input id="brief" spellcheck="false" placeholder="Describe a mechanism…">
+      <div id="brow"><button id="go">Submit</button><span id="bmeta"></span></div>
+      <div class="kvs" id="kvs"></div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const D=window.DATA,$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const checks=D.report.checks,passed=checks.filter(c=>c.status==='pass').length;
+const fig=D.figures[0];
+const totalMass=D.measures.reduce((s,m)=>s+m.massG,0);
+const stab=checks.find(c=>c.name==='stability');
+
+/* header + stats */
+$('#dtitle').textContent='FIG-'+fig.figNum+' · '+fig.name;
+$('#dtag').textContent='attempt '+D.attempts;
+$('#vbig').textContent=D.report.pass?'PASS':'FAIL';
+$('#vsub').textContent=passed+'/'+checks.length+' checks · '+D.report.failures.length+' failures';
+$('#mbig').textContent=(totalMass/1000).toFixed(2)+' kg';
+$('#msub').textContent=D.measures.length+' parts · ρ-weighted';
+$('#tbig').textContent=D.report.timingMs.toFixed(1)+' ms';
+$('#tsub').textContent='spec → report pipeline';
+
+/* sparkline helper */
+function spark(el,vals,col){
+  const w=90,h=26,mx=Math.max(...vals),mn=Math.min(...vals),r=mx-mn||1;
+  const pts=vals.map((v,i)=>[i/(vals.length-1)*w,h-3-((v-mn)/r)*(h-6)]);
+  el.innerHTML=`<polyline points="${pts.map(p=>p.map(n=>n.toFixed(1)).join(',')).join(' ')}"
+    fill="none" stroke="${col}" stroke-width="1.5" opacity=".9"/>
+    <polygon points="0,${h} ${pts.map(p=>p.map(n=>n.toFixed(1)).join(',')).join(' ')} ${w},${h}"
+    fill="${col}" opacity=".12"/>`;
+}
+spark($('#spark1'),checks.map(()=>1),'#73bf69');
+spark($('#spark2'),D.measures.map(m=>m.massG),'#5794f2');
+
+/* status cells */
+$('#cells').innerHTML=checks.map(c=>`
+  <div class="cell"><span class="cs">${c.status==='pass'?'OK':'CRIT'}</span>
+    <span class="cn">${esc(c.name)}</span>
+    <span class="cv">${c.measured?(+c.measured).toFixed(2):'—'}</span></div>`).join('');
+
+/* clearance chart (parse per-joint values from check detail) */
+const ck=checks.find(c=>c.name==='clearance');
+let pts=[];
+if(ck){
+  const re=/'([^']+)'[^:]*:\s*([\d.]+)mm/g;let m;
+  while((m=re.exec(ck.detail)))pts.push({name:m[1],v:+m[2]});
+}
+if(!pts.length)pts=D.spec.joints.map(j=>({name:j.a+'~'+j.b,v:12}));
+const thr=D.spec.tests.min_clearance_mm;
+(function draw(){
+  const svg=$('#chart'),W=880,H=236;svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const pad={l:44,r:14,t:16,b:30};
+  const yMax=Math.max(16,...pts.map(p=>p.v))*1.15;
+  const y=v=>pad.t+(1-v/yMax)*(H-pad.t-pad.b);
+  const step=(W-pad.l-pad.r)/(pts.length+1);
+  const x=i=>pad.l+step*(i+1);
+  let s='';
+  /* gridlines + y labels */
+  for(let g=0;g<=4;g++){
+    const gy=pad.t+g*(H-pad.t-pad.b)/4,val=(yMax*(1-g/4)).toFixed(0);
+    s+=`<line x1="${pad.l}" y1="${gy}" x2="${W-pad.r}" y2="${gy}" stroke="#262a32" stroke-width="1"/>`;
+    s+=`<text x="${pad.l-8}" y="${gy+3.5}" fill="#5f6570" font-size="9.5" text-anchor="end" font-family="ui-monospace,Menlo,monospace">${val}</text>`;
+  }
+  /* threshold */
+  s+=`<line x1="${pad.l}" y1="${y(thr)}" x2="${W-pad.r}" y2="${y(thr)}" stroke="#f2495c" stroke-width="1.2" stroke-dasharray="5,4"/>`;
+  s+=`<text x="${W-pad.r-4}" y="${y(thr)-5}" fill="#f2495c" font-size="9.5" text-anchor="end" font-family="ui-monospace,Menlo,monospace">min ${thr}mm</text>`;
+  /* area+line through points */
+  const line=pts.map((p,i)=>`${x(i)},${y(p.v)}`).join(' ');
+  s+=`<polygon points="${pad.l},${H-pad.b} ${line} ${x(pts.length-1)},${H-pad.b}" fill="rgba(115,191,105,.12)"/>`;
+  s+=`<polyline points="${line}" fill="none" stroke="#73bf69" stroke-width="2"/>`;
+  pts.forEach((p,i)=>{
+    s+=`<circle cx="${x(i)}" cy="${y(p.v)}" r="4" fill="#16181d" stroke="#73bf69" stroke-width="2"/>`;
+    s+=`<text x="${x(i)}" y="${y(p.v)-9}" fill="#d8d9da" font-size="10" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">${p.v.toFixed(2)}</text>`;
+    s+=`<text x="${x(i)}" y="${H-pad.b+16}" fill="#8b919d" font-size="9.5" text-anchor="middle">${esc(p.name)}</text>`;
+  });
+  /* axis labels */
+  s+=`<text x="${pad.l}" y="11" fill="#5f6570" font-size="9.5">mm — per-joint clearance</text>`;
+  svg.innerHTML=s;
+})();
+
+/* tip gauge */
+(function gauge(){
+  const svg=$('#gauge'),cx=75,cy=88,r=62;
+  const val=stab?+stab.measured:0,max=160;
+  const a0=Math.PI,a1=0;
+  const arc=(f0,f1,col,w)=>{
+    const a_0=a0-(a0-a1)*f0,a_1=a0-(a0-a1)*f1;
+    const x0=cx+Math.cos(a_0)*r,y0=cy-Math.sin(a_0)*r;
+    const x1=cx+Math.cos(a_1)*r,y1=cy-Math.sin(a_1)*r;
+    return `<path d="M${x0} ${y0} A${r} ${r} 0 ${f1-f0>.5?1:0} 1 ${x1} ${y1}" fill="none" stroke="${col}" stroke-width="${w}"/>`;
+  };
+  const f=Math.min(1,val/max);
+  svg.innerHTML=
+    arc(0,.3,'#f2495c',10)+arc(.3,.6,'#f2cc0c',10)+arc(.6,1,'#73bf69',10)+
+    arc(0,f,'rgba(255,255,255,.85)',10)+
+    `<circle cx="${cx}" cy="${cy}" r="4" fill="#d8d9da"/>`;
+  $('#gval').textContent=val.toFixed(1);
+  $('#gval').style.color=val>96?'#73bf69':val>48?'#f2cc0c':'#f2495c';
+})();
+
+/* mass bars */
+const mx=Math.max(...D.measures.map(m=>m.massG));
+$('#bars').innerHTML=D.measures.map(m=>{
+  const w=(m.massG/mx*100).toFixed(1);
+  return `<div class="bgrow"><div class="bl"><span class="id">${esc(m.id)}</span>
+    <span class="v">${m.massG>=1000?(m.massG/1000).toFixed(2)+' kg':Math.round(m.massG)+' g'}</span></div>
+    <div class="bgtrack"><div class="bgfill${m.massG/mx>.6?' hot':''}" style="width:${w}%"></div>
+    <div class="bgtick" style="left:60%"></div></div></div>`;
+}).join('')+`<div style="font-size:9.5px;color:var(--dim);margin-top:2px">threshold band: >60% of max → orange</div>`;
+
+/* plan table */
+const v3=v=>'('+v.map(n=>(+n).toFixed(0)).join(',')+')';
+$('#plantb').innerHTML=D.plan.map(op=>{
+  if(op.kind==='place'){
+    return `<tr><td class="num">${op.step}</td><td class="nm">place</td>
+      <td>${esc(op.part)}</td><td><span class="armt ${op.arm}">${op.arm}</span></td>
+      <td class="num">${Math.round(op.massG)}g</td></tr>`;
+  }
+  return `<tr><td class="num">·</td><td style="color:var(--purple)">${esc(op.type)}</td>
+    <td style="color:var(--mut)">${esc(op.a)}↔${esc(op.b)}</td>
+    <td><span class="jty">joint</span></td>
+    <td class="num">@ ${v3(op.anchor)}</td></tr>`;
+}).join('');
+
+/* logs */
+const now=Date.now();
+D.log.forEach((l,i)=>{
+  const lv=/pass|✓|verified/i.test(l)?'ok':/…|designing/i.test(l)?'warn':'info';
+  const t=new Date(now-(D.log.length-i)*4200).toTimeString().slice(0,8);
+  $('#logs').insertAdjacentHTML('beforeend',
+    `<div class="r"><span class="ts">${t}</span><span class="lv ${lv}">${lv.toUpperCase()}</span><span class="ms">${esc(l)}</span></div>`);
+});
+
+/* brief + thresholds */
+const brief=$('#brief'),go=$('#go');brief.value=D.brief;
+$('#bmeta').textContent='units '+D.spec.units+' · '+D.attempts+' attempt';
+$('#kvs').innerHTML=`
+  <span>min_clearance</span><b>${D.spec.tests.min_clearance_mm} mm</b>
+  <span>max_tip_angle</span><b>${D.spec.tests.max_tip_angle_deg}°</b>
+  <span>insert_axis</span><b>+z (all parts)</b>`;
+function submit(){
+  const v=brief.value.trim();if(!v)return;
+  go.disabled=true;go.textContent='Queued…';
+  $('#logs').insertAdjacentHTML('beforeend',
+    `<div class="r"><span class="ts">${new Date().toTimeString().slice(0,8)}</span><span class="lv info">INFO</span><span class="ms">brief ▸ ${esc(v)}</span></div>`+
+    `<div class="r"><span class="ts">${new Date().toTimeString().slice(0,8)}</span><span class="lv warn">WARN</span><span class="ms">designing…</span></div>`);
+  $('#logs').scrollTop=$('#logs').scrollHeight;
+  setTimeout(()=>{go.disabled=false;go.textContent='Submit'},1000);
+}
+go.addEventListener('click',submit);
+$('#newb').addEventListener('click',()=>brief.focus());
+$('#refresh').addEventListener('click',()=>{$('#logs').insertAdjacentHTML('beforeend',
+  `<div class="r"><span class="ts">${new Date().toTimeString().slice(0,8)}</span><span class="lv info">INFO</span><span class="ms">dashboard refresh · queries re-executed</span></div>`);
+  $('#logs').scrollTop=$('#logs').scrollHeight});
+brief.addEventListener('keydown',e=>{if(e.key==='Enter')submit()});
+let expl=false;
+$('#rimg').addEventListener('click',()=>{expl=!expl;$('#rimg').src=expl?'lamp_exploded.png':'lamp_flat.png'});
+</script>
+</body>
+</html>

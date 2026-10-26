@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Darkroom</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{
+    background:#0a0202;color:#e8a89a;font-family:"Courier New",Courier,monospace;
+    display:flex;flex-direction:column;position:relative;
+  }
+  /* safelight bloom + vignette + grain */
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(ellipse 700px 420px at 50% -60px,rgba(255,60,40,.30) 0%,rgba(160,20,10,.12) 55%,transparent 75%),
+      radial-gradient(ellipse at 50% 120%,rgba(120,10,5,.10),transparent 55%);
+  }
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:repeating-linear-gradient(37deg,rgba(255,255,255,.012) 0 1px,transparent 1px 4px),
+               radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%);}
+  .hand{font-family:"Segoe Script","Bradley Hand","Comic Sans MS",cursive}
+  /* ---------- safelight bulb ---------- */
+  #safelight{position:fixed;top:-6px;left:50%;transform:translateX(-50%);z-index:5;text-align:center}
+  #safelight .cord{width:2px;height:26px;background:#222;margin:0 auto}
+  #safelight .shade{
+    width:64px;height:34px;background:linear-gradient(#3a0a06,#1a0503);border-radius:0 0 34px 34px/0 0 18px 18px;
+    border:1px solid #552;box-shadow:0 6px 30px rgba(255,60,40,.55);
+  }
+  #safelight .glow{width:120px;height:14px;margin:-4px auto 0;border-radius:50%;
+    background:radial-gradient(ellipse,rgba(255,80,60,.8),transparent 70%);animation:pulse 4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.75}50%{opacity:1}}
+  /* ---------- header ---------- */
+  #hd{flex:0 0 auto;display:flex;align-items:center;gap:18px;padding:8px 24px 6px;border-bottom:1px solid #3a0e08;z-index:2}
+  #hd .t1{font-size:19px;letter-spacing:5px;color:#ff6a5a}
+  #hd .t2{font-size:10.5px;letter-spacing:3px;color:#8a443a}
+  #hd .status{margin-left:auto;font-size:12px;letter-spacing:3px;padding:5px 16px;border:1px solid #5a1a10}
+  #hd .status.ok{color:#ff9a8a;border-color:#7a2a1a;background:rgba(160,30,15,.12)}
+  #hd .status.bad{color:#ff4a3a;border-color:#ff4a3a}
+  /* ---------- main grid ---------- */
+  #main{flex:1;min-height:0;display:grid;grid-template-columns:295px 1fr 295px;gap:16px;padding:16px 20px 12px;z-index:1}
+  .col{display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto}
+  .panel{
+    background:linear-gradient(#180705,#120403);border:1px solid #4a140c;flex:0 0 auto;
+    box-shadow:0 4px 18px rgba(0,0,0,.6),inset 0 0 30px rgba(255,60,40,.04);
+  }
+  .panel.grow{flex:1;min-height:0;overflow-y:auto}
+  .ptape{
+    display:inline-block;background:rgba(230,215,190,.12);color:#ffb0a0;font-size:10.5px;
+    letter-spacing:3px;padding:3px 14px;margin:10px 0 0 14px;transform:rotate(-1.5deg);
+    border-left:1px solid rgba(255,255,255,.15);border-right:1px solid rgba(255,255,255,.15);
+  }
+  .pbody{padding:10px 14px 14px;font-size:11.5px;line-height:1.65}
+  textarea{
+    width:100%;background:#0d0302;border:1px solid #4a140c;color:#ffc0b0;font-family:inherit;
+    font-size:11.5px;resize:none;height:56px;padding:7px;line-height:1.5;
+  }
+  textarea:focus{outline:none;border-color:#ff5a4a;box-shadow:0 0 12px rgba(255,60,40,.25)}
+  .btn{
+    width:100%;margin-top:8px;background:#2a0a06;border:1px solid #8a2a1a;color:#ffb0a0;
+    font-family:inherit;font-size:11px;letter-spacing:3px;padding:8px;cursor:pointer;
+  }
+  .btn:hover{background:#4a140c;color:#fff;border-color:#ff6a5a}
+  .btn:active{transform:translateY(1px)}
+  .kv{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #3a0e08}
+  .kv:last-child{border-bottom:none}
+  .kv .k{color:#8a443a}.kv .v{color:#ffc0b0}
+  .sw{display:inline-block;width:9px;height:9px;margin-right:7px;border:1px solid #000;filter:saturate(.4) brightness(.85)}
+  /* ---------- center column ---------- */
+  #center{display:flex;flex-direction:column;gap:14px;min-height:0;min-width:0}
+  /* drying wire */
+  #wire{
+    flex:1;min-height:0;position:relative;border:1px solid #4a140c;
+    background:linear-gradient(#160604,#0f0303);overflow:hidden;
+  }
+  #wire .line{position:absolute;left:0;right:0;top:34px;height:1.5px;background:#5a2018;box-shadow:0 1px 0 #000}
+  .peg{
+    position:absolute;top:20px;width:9px;height:30px;z-index:6;
+    background:linear-gradient(90deg,#6a4a2a 0 45%,#3a2410 45% 55%,#6a4a2a 55%);
+    border-radius:3px;box-shadow:0 2px 4px rgba(0,0,0,.7);
+  }
+  .peg::after{content:"";position:absolute;top:20px;left:0;right:0;height:3px;background:#2a1808}
+  /* big print on the wire */
+  #bigprint{
+    position:absolute;left:50%;top:38px;transform:translateX(-50%) rotate(1.2deg);
+    background:#e8ddd0;padding:10px 10px 34px;box-shadow:0 14px 30px rgba(0,0,0,.75);z-index:4;
+    max-height:calc(100% - 130px);display:flex;flex-direction:column;
+  }
+  #bigprint .imgw{overflow:hidden;flex:1;min-height:0;display:flex}
+  #bigprint img{height:100%;max-height:100%;object-fit:contain;filter:sepia(.9) hue-rotate(-28deg) saturate(1.4) brightness(.92) contrast(1.06)}
+  #bigprint .cl{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:10px;color:#4a3428;letter-spacing:2px}
+  /* film strip of part negatives */
+  #film{position:absolute;left:24px;right:24px;bottom:14px;height:78px;display:flex;align-items:center;z-index:3}
+  #filmstrip{
+    display:flex;gap:8px;background:#0a0606;padding:10px 12px;border-radius:2px;
+    box-shadow:0 8px 20px rgba(0,0,0,.7);transform:rotate(-.6deg);overflow-x:auto;
+  }
+  #filmstrip::before,#filmstrip::after{content:"";flex:0 0 auto;width:8px}
+  .frame{
+    flex:0 0 auto;width:92px;height:56px;position:relative;
+    background:linear-gradient(#2a1208,#1a0a04);border:1px solid #3a1810;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    box-shadow:inset 0 0 12px rgba(255,70,40,.15);
+  }
+  .frame .pid{font-size:9px;letter-spacing:1px;color:#ff8a70}
+  .frame .psh{font-size:17px;color:#c0563f}
+  .frame .pno{position:absolute;bottom:2px;right:4px;font-size:8px;color:#7a3828}
+  .frame::before,.frame::after{content:"";position:absolute;left:6px;right:6px;height:3px;
+    background:repeating-linear-gradient(90deg,#000 0 4px,transparent 4px 8px)}
+  .frame::before{top:-8px}.frame::after{bottom:-8px}
+  #wirecap{position:absolute;top:8px;left:14px;font-size:10px;letter-spacing:3px;color:#7a3828;z-index:4}
+  /* ---------- developing trays ---------- */
+  #trays{flex:0 0 250px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .tray{
+    background:linear-gradient(#1c1c1c,#101010);border-radius:6px;border:1px solid #2a0a06;
+    box-shadow:inset 0 4px 10px rgba(0,0,0,.9),0 6px 16px rgba(0,0,0,.5);
+    padding:10px;display:flex;flex-direction:column;position:relative;min-height:0;
+  }
+  .tray .chem{
+    flex:1;min-height:0;border-radius:4px;position:relative;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 0%,#3a0e08 0%,#1a0603 70%);
+    box-shadow:inset 0 2px 14px rgba(255,60,40,.18),inset 0 -4px 10px #000;
+  }
+  .tray .chem::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;
+    background:rgba(255,110,90,.35);filter:blur(1px)}
+  .print{
+    position:absolute;left:14px;right:14px;top:10px;bottom:10px;overflow-y:auto;
+    background:linear-gradient(#5a2a20,#45201a);transform:rotate(-1.6deg);
+    box-shadow:0 3px 10px rgba(0,0,0,.6),inset 0 0 24px rgba(0,0,0,.35);
+    padding:8px 10px;font-size:9.5px;line-height:1.6;color:#e8a088;
+    animation:emerge 2.4s ease-out;
+  }
+  .print::-webkit-scrollbar{width:5px}.print::-webkit-scrollbar-thumb{background:#7a3a2a}
+  @keyframes emerge{from{opacity:.15;transform:rotate(-1.6deg) translateY(8px)}to{opacity:1}}
+  .print b{color:#ffc0a8;letter-spacing:1px}
+  .print .r{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dashed rgba(255,160,130,.2)}
+  .tray .lbl{
+    position:absolute;top:-9px;left:16px;background:rgba(230,215,190,.85);color:#3a2018;
+    font-size:10px;letter-spacing:3px;padding:2px 12px;transform:rotate(-2deg);z-index:5;
+    box-shadow:0 2px 5px rgba(0,0,0,.5);
+  }
+  .tray .tongs{position:absolute;right:10px;top:-12px;width:34px;height:5px;background:#888;border-radius:2px;transform:rotate(24deg);box-shadow:0 1px 3px #000}
+  .tray .tongs::before{content:"";position:absolute;left:4px;top:-4px;width:26px;height:4px;background:#aaa;border-radius:2px;transform:rotate(-8deg)}
+  /* ---------- right: test strip ---------- */
+  .tstrip{display:flex;flex-direction:column;gap:6px}
+  .patch{
+    flex:1;border:1px solid #3a0e08;position:relative;padding:7px 9px;min-height:44px;
+    display:flex;flex-direction:column;justify-content:center;
+  }
+  .patch .nm{font-size:10px;letter-spacing:1px;color:#ffb0a0}
+  .patch .dt{font-size:9px;color:#8a443a;margin-top:2px;line-height:1.4}
+  .patch .v{position:absolute;right:8px;top:50%;transform:translateY(-50%) rotate(-4deg);font-size:13px}
+  .patch.ok{background:linear-gradient(#4a1a12,#38120c)}
+  .patch.bad{background:repeating-linear-gradient(45deg,#3a0a06 0 8px,#2a0504 8px 16px)}
+  /* timer dial */
+  #timer{display:flex;gap:14px;align-items:center}
+  #dial{
+    flex:0 0 74px;height:74px;border-radius:50%;border:2px solid #5a1a10;position:relative;
+    background:radial-gradient(circle at 45% 40%,#1e0805,#0d0302);
+    box-shadow:inset 0 0 14px #000,0 0 12px rgba(255,60,40,.15);
+  }
+  #dial .nd{position:absolute;left:50%;top:50%;width:2px;height:30px;background:#ff6a5a;transform-origin:50% 0}
+  #dial::after{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#ff6a5a}
+  #timer .tx{font-size:11px;color:#8a443a;line-height:1.7}
+  #timer .tx b{display:block;font-size:16px;color:#ffb0a0;letter-spacing:1px}
+  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#4a140c}
+</style>
+</head>
+<body>
+<div id="safelight"><div class="cord"></div><div class="shade"></div><div class="glow"></div></div>
+
+<header id="hd">
+  <div>
+    <div class="t1">◉ INKBENCH DARKROOM</div>
+    <div class="t2">SAFELIGHT ON · DOOR LOCKED · NO WHITE LIGHT PAST THIS POINT</div>
+  </div>
+  <div class="status" id="status"></div>
+</header>
+
+<div id="main">
+  <!-- left: enlarger station -->
+  <div class="col">
+    <div class="panel">
+      <span class="ptape">ENLARGER №1</span>
+      <div class="pbody">
+        <div class="kv"><span class="k">negative</span><span class="v" id="neg"></span></div>
+        <div class="kv"><span class="k">paper</span><span class="v">IB-1 · grade 2</span></div>
+        <div style="margin-top:8px">
+          <textarea id="brief" spellcheck="false"></textarea>
+          <button class="btn" id="expose">◉ EXPOSE NEW PRINT</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <span class="ptape">DARKROOM TIMER</span>
+      <div class="pbody"><div id="timer">
+        <div id="dial"><div class="nd" id="nd"></div></div>
+        <div class="tx">develop time<b id="tt"></b><span id="attline"></span></div>
+      </div></div>
+    </div>
+    <div class="panel grow">
+      <span class="ptape">CHEMISTRY / MATERIALS</span>
+      <div class="pbody" id="mats"></div>
+    </div>
+  </div>
+
+  <!-- center: wire + trays -->
+  <div id="center">
+    <div id="wire">
+      <div id="wirecap">DRYING LINE — DO NOT TOUCH WET PRINTS</div>
+      <div class="line"></div>
+      <div id="bigprint">
+        <div class="imgw"><img src="lamp_flat.png" alt="print drying"></div>
+        <div class="cl" id="printcap"></div>
+      </div>
+      <div id="film"><div id="filmstrip"></div></div>
+    </div>
+    <div id="trays">
+      <div class="tray"><span class="lbl">DEVELOPER</span><span class="tongs"></span>
+        <div class="chem"><div class="print" id="dev"></div></div></div>
+      <div class="tray"><span class="lbl">STOP BATH</span><span class="tongs"></span>
+        <div class="chem"><div class="print" id="stop" style="transform:rotate(1.3deg)"></div></div></div>
+      <div class="tray"><span class="lbl">FIXER</span><span class="tongs"></span>
+        <div class="chem"><div class="print" id="fix" style="transform:rotate(-.8deg)"></div></div></div>
+    </div>
+  </div>
+
+  <!-- right: test strip + contact sheet -->
+  <div class="col">
+    <div class="panel grow">
+      <span class="ptape">TEST STRIP — 5 EXPOSURES</span>
+      <div class="pbody tstrip" id="checks"></div>
+    </div>
+    <div class="panel">
+      <span class="ptape">CONTACT SHEET — JOINTS</span>
+      <div class="pbody" id="joints"></div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const D=window.DATA,$=s=>document.querySelector(s);
+const f=(a,d=0)=>a.map(x=>(+x).toFixed(d)).join(', ');
+const mass=id=>{const m=D.measures.find(m=>m.id===id);return m?m.massG:0};
+const GLYPH={cylinder:'◉',box:'▭',cone:'◮',sphere:'●'};
+
+/* header + status */
+const st=$('#status');
+st.textContent=D.report.pass?'● PRINT VERIFIED — HANG TO DRY':'▲ FOGGED — REPRINT REQUIRED';
+st.className='status '+(D.report.pass?'ok':'bad');
+$('#neg').textContent='neg. IB-'+String(D.attempts).padStart(3,'0');
+$('#brief').value=D.brief;
+$('#expose').onclick=()=>{
+  const d=document.createElement('div');
+  d.innerHTML='<div class="r"><span>re-exposed:</span><span>'+new Date().toLocaleTimeString()+'</span></div>';
+  $('#stop').prepend(d);
+};
+
+/* timer */
+$('#tt').textContent=D.report.timingMs+' ms';
+$('#attline').textContent='attempt '+D.attempts+' · agitate gently';
+$('#nd').style.transform='rotate('+(D.report.timingMs*3.6)+'deg)';
+
+/* chemistry = materials */
+$('#mats').innerHTML=Object.entries(D.spec.materials).map(([n,m])=>
+  '<div class="kv"><span class="k"><span class="sw" style="background:'+m.color+'"></span>'+n+'</span>'+
+  '<span class="v">stock ρ'+m.density+'</span></div>').join('')+
+  '<div class="kv"><span class="k">water</span><span class="v">68°F</span></div>';
+
+/* print caption */
+$('#printcap').textContent='PRINT №'+(D.figures[0].figNum||1)+' — "'+D.figures[0].name+'" — '+
+  D.report.checks.filter(c=>c.status==='pass').length+'/'+D.report.checks.length+' OK — '+D.report.timingMs+'ms dev';
+
+/* pegs on the wire + film strip */
+const wire=$('#wire');
+[[-70,'bigprint'],[70]].forEach((_,i)=>{
+  const p=document.createElement('div');p.className='peg';
+  p.style.left='calc(50% + '+(i?62:-70)+'px)';wire.appendChild(p);
+});
+$('#filmstrip').innerHTML=D.spec.parts.map((p,i)=>
+  '<div class="frame"><span class="pid">'+p.id+'</span><span class="psh">'+(GLYPH[p.shape]||'◇')+'</span>'+
+  '<span class="pno">'+(i+1)+'A</span></div>').join('');
+
+/* DEV tray: spec emerging */
+$('#dev').innerHTML='<b>'+D.spec.name.toUpperCase()+' — '+D.spec.parts.length+' PARTS</b>'+
+  D.spec.parts.map(p=>{
+    const m=D.measures.find(m=>m.id===p.id);
+    const sz=Array.isArray(p.size)?p.size.join('×'):('r'+p.size.r+' h'+p.size.h);
+    return '<div class="r"><span>'+p.id+' · '+p.shape+'</span><span>'+sz+'mm · '+(m?m.massG.toFixed(1):'—')+'g</span></div>';
+  }).join('')+
+  '<div class="r"><b>Σ mass</b><b>'+(D.measures.reduce((s,m)=>s+m.massG,0)/1000).toFixed(3)+'kg</b></div>'+
+  '<div class="r"><span>joints</span><span>'+D.spec.joints.map(j=>j.type[0].toUpperCase()).join(' ')+'</span></div>';
+
+/* STOP tray: process halted — log */
+$('#stop').innerHTML='<b>— PROCESS HALTED · SESSION LOG —</b>'+
+  D.log.map(x=>'<div class="r"><span>'+x+'</span></div>').join('');
+
+/* FIX tray: arms plan fixed */
+$('#fix').innerHTML='<b>BUILD PLAN — FIXED</b>'+
+  D.plan.map(s=>s.kind==='place'
+    ?'<div class="r"><span>st.'+s.step+' '+s.part+' '+s.glyph+' · arm '+s.arm+'</span><span>'+s.massG.toFixed(0)+'g</span></div>'
+    :'<div class="r"><span>&nbsp;&nbsp;+ '+s.type+' '+s.a+'~'+s.b+'</span><span>['+f(s.anchor,0)+']</span></div>').join('');
+
+/* test strip: checks as exposure patches */
+$('#checks').innerHTML=D.report.checks.map(k=>{
+  const p=k.status==='pass';
+  return '<div class="patch '+(p?'ok':'bad')+'"><div class="nm">'+k.name.toUpperCase()+'</div>'+
+    '<div class="dt">'+(k.measured?'exp. '+(+k.measured).toFixed(2)+' — ':'')+k.detail.slice(0,64)+'</div>'+
+    '<div class="v">'+(p?'✓':'✗')+'</div></div>';
+}).join('');
+
+/* contact sheet: joints */
+$('#joints').innerHTML=D.spec.joints.map(j=>
+  '<div class="kv"><span class="k">'+j.a+' ~ '+j.b+'</span><span class="v">'+j.type+'</span></div>').join('');
+</script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Oscilloscope</title>
+<style>
+  :root{
+    --chassis:#c9c2b2; --chassis2:#b3ab99; --bezel:#3a3d3a; --screen:#0a140c;
+    --phos:#52ff8a; --phos-dim:#1d7a42; --ink:#22241f; --paper:#efe9db;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden;font-family:var(--mono);
+    background:#8f887a;color:var(--ink);font-size:12px}
+  .bench{height:100vh;padding:12px;display:flex}
+  .unit{flex:1;background:linear-gradient(#d5cebc,#bdb5a3);border-radius:10px;border:1px solid #8f887a;
+    box-shadow:inset 0 1px 0 #ffffff88,0 6px 18px #00000044;display:grid;
+    grid-template-rows:56px 1fr 168px;gap:10px;padding:14px;position:relative}
+  .unit:before{content:"";position:absolute;inset:5px;border:1px solid #8f887a66;border-radius:7px;pointer-events:none}
+
+  header{display:flex;align-items:center;gap:16px;border-bottom:2px groove #8f887a;padding-bottom:8px}
+  .brand{font-size:15px;font-weight:700;letter-spacing:.28em}
+  .brand small{display:block;font-size:9px;letter-spacing:.2em;color:#6a6355;font-weight:400}
+  .pilot{width:12px;height:12px;border-radius:50%;background:#3dff7a;box-shadow:0 0 8px #3dff7a,inset 0 -2px 3px #0006;border:1px solid #1f8a45}
+  .vuwrap{margin-left:auto;display:flex;gap:12px;align-items:center}
+  .vu{width:190px;height:44px;background:linear-gradient(#f6f1e3,#e7dfc9);border:2px solid #5a5244;border-radius:6px;position:relative;overflow:hidden}
+  .vu .scale{position:absolute;inset:0}
+  .vu .needle{position:absolute;left:50%;bottom:-6px;width:2px;height:52px;background:#c33;transform-origin:bottom center}
+  .vu .cap{position:absolute;left:50%;bottom:-8px;width:16px;height:16px;border-radius:50%;background:#33302a;transform:translateX(-50%)}
+  .vu .lab{position:absolute;top:4px;width:100%;text-align:center;font-size:8px;letter-spacing:.3em;color:#6a6355}
+  .vlabel{font-size:9px;letter-spacing:.2em;color:#6a6355;text-align:center}
+
+  main{display:grid;grid-template-columns:1fr 330px;gap:10px;min-height:0}
+  /* CRT screen */
+  .crt{position:relative;border-radius:12px;background:var(--screen);border:8px solid var(--bezel);
+    box-shadow:inset 0 0 40px #000, inset 0 0 4px #52ff8a33;overflow:hidden;min-height:0}
+  .crt img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+    filter:invert(.94) brightness(1.15) sepia(1) saturate(5) hue-rotate(88deg) contrast(1.05);opacity:.92}
+  .grat{position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(#52ff8a1f 1px,transparent 1px),linear-gradient(90deg,#52ff8a1f 1px,transparent 1px);
+    background-size:10% 12.5%}
+  .grat:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:#52ff8a55}
+  .grat:after{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:#52ff8a55}
+  .scan{position:absolute;inset:0;pointer-events:none;mix-blend-mode:overlay;
+    background:repeating-linear-gradient(0deg,#000 0 1px,transparent 1px 3px);opacity:.5}
+  .glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,#00000099 100%)}
+  .osd{position:absolute;font-size:10px;color:var(--phos);text-shadow:0 0 6px #52ff8a88;letter-spacing:.1em}
+  .trace{position:absolute;left:0;right:0;bottom:8%;height:60px;pointer-events:none}
+
+  /* right readouts */
+  .rside{display:flex;flex-direction:column;gap:10px;min-height:0}
+  .rd{background:#262a26;border-radius:8px;padding:10px 12px;border:1px solid #171a17;color:var(--phos)}
+  .rd .ch{font-size:9px;color:#9aa79c;letter-spacing:.25em;display:flex;justify-content:space-between}
+  .rd .v{font-size:22px;text-shadow:0 0 8px #52ff8a99;margin-top:2px}
+  .rd .s{font-size:9px;color:#9aa79c;margin-top:2px}
+  .selftest{background:#262a26;border-radius:8px;border:1px solid #171a17;padding:10px 12px;flex:1;overflow:auto;min-height:0}
+  .selftest h4{margin:0 0 8px;font-size:9px;letter-spacing:.3em;color:#9aa79c;font-weight:400}
+  .st{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed #ffffff14}
+  .st .led{width:9px;height:9px;border-radius:50%;background:#3dff7a;box-shadow:0 0 7px #3dff7a}
+  .st .nm{color:#cfe8d6;font-size:11px;flex:1}
+  .st .mv{color:var(--phos);font-size:10px}
+
+  /* knob deck */
+  .deck{display:grid;grid-template-columns:1fr 560px;gap:10px;min-height:0}
+  .knobrow{background:linear-gradient(#cdc6b4,#b7af9c);border:1px solid #8f887a;border-radius:8px;
+    display:flex;align-items:center;gap:4px;padding:0 14px;overflow:hidden}
+  .knobcell{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-right:1px solid #8f887a55}
+  .knobcell:last-child{border-right:0}
+  .knob{width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#4c4f4a,#26282a 70%);
+    border:2px solid #14161a;box-shadow:0 3px 6px #0006,inset 0 1px 0 #ffffff33;position:relative;cursor:pointer}
+  .knob .ptr{position:absolute;left:50%;top:4px;width:3px;height:16px;background:var(--phos);
+    transform-origin:50% 22px;box-shadow:0 0 5px #52ff8a}
+  .klab{font-size:8.5px;letter-spacing:.14em;color:#4d4839;text-align:center;line-height:1.3}
+  .klab b{display:block;font-size:9px;color:#2b281f}
+  .io{background:linear-gradient(#cdc6b4,#b7af9c);border:1px solid #8f887a;border-radius:8px;padding:10px 12px;
+    display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr;gap:6px;min-height:0}
+  .io .inrow{display:flex;gap:8px;align-items:center}
+  .bnc{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#8a8d88,#3a3d3a 65%,#14161a);border:1px solid #14161a;flex:none}
+  .io input{flex:1;background:var(--screen);color:var(--phos);border:1px solid #171a17;border-radius:4px;
+    font-family:var(--mono);font-size:11px;padding:7px 10px;text-shadow:0 0 5px #52ff8a77}
+  .io input:focus{outline:none;box-shadow:0 0 0 2px #52ff8a33}
+  .io button{background:linear-gradient(#4c4f4a,#26282a);color:var(--phos);border:1px solid #14161a;border-radius:4px;
+    font-family:var(--mono);font-size:10px;letter-spacing:.2em;padding:7px 16px;cursor:pointer;text-shadow:0 0 5px #52ff8a77}
+  .io button:hover{background:linear-gradient(#565a54,#2c2e30)}
+  .io button:active{transform:translateY(1px)}
+  .term{background:var(--screen);border:1px solid #171a17;border-radius:4px;overflow:auto;padding:6px 10px;min-height:0}
+  .term div{color:var(--phos);opacity:.85;font-size:10px;white-space:nowrap;text-shadow:0 0 4px #52ff8a55}
+  .term div:first-child{color:#9aa79c}
+  .term div:last-child{font-weight:700}
+</style>
+</head>
+<body>
+<div class="bench"><div class="unit">
+  <header>
+    <div class="pilot"></div>
+    <div class="brand">INKBENCH TDS-1<small>AGENTIC CAD VERIFICATION OSCILLOSCOPE</small></div>
+    <div class="vuwrap">
+      <div class="vlabel">VERIFY<br>LEVEL</div>
+      <div class="vu" id="vu"><div class="lab">0&emsp;2&emsp;4&emsp;6&emsp;8&emsp;10</div>
+        <div class="scale"></div><div class="needle" id="needle"></div><div class="cap"></div></div>
+      <div class="vlabel" id="passlab"></div>
+    </div>
+  </header>
+  <main>
+    <div class="crt">
+      <img src="lamp_flat.png" alt="render">
+      <div class="grat"></div>
+      <svg class="trace" id="trace" preserveAspectRatio="none" viewBox="0 0 100 30"></svg>
+      <div class="scan"></div><div class="glow"></div>
+      <div class="osd" style="top:10px;left:14px" id="osdTL"></div>
+      <div class="osd" style="top:10px;right:14px" id="osdTR"></div>
+      <div class="osd" style="bottom:10px;left:14px" id="osdBL"></div>
+      <div class="osd" style="bottom:10px;right:14px" id="osdBR"></div>
+    </div>
+    <div class="rside">
+      <div class="rd"><div class="ch">CH1 <span>TOTAL MASS</span></div><div class="v" id="ch1"></div><div class="s" id="ch1s"></div></div>
+      <div class="rd"><div class="ch">CH2 <span>TIP MARGIN</span></div><div class="v" id="ch2"></div><div class="s">CoM vs support hull {base}</div></div>
+      <div class="rd"><div class="ch">TRIG <span>MIN CLEARANCE</span></div><div class="v" id="ch3"></div><div class="s" id="ch3s"></div></div>
+      <div class="selftest"><h4>SELF-TEST · VERIFICATION CHECKS</h4><div id="checks"></div></div>
+    </div>
+  </main>
+  <div class="deck">
+    <div class="knobrow" id="knobs"></div>
+    <div class="io">
+      <div class="inrow">
+        <div class="bnc"></div>
+        <input id="brief" spellcheck="false">
+        <button id="acq">ACQUIRE ▸</button>
+      </div>
+      <div class="term" id="term"></div>
+    </div>
+  </div>
+</div></div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA;
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const f1=v=>(+v).toFixed(1),f2=v=>(+v).toFixed(2);
+const totalMass=D.measures.reduce((s,m)=>s+m.massG,0);
+const stab=D.report.checks.find(c=>c.name==='stability');
+const clr=D.report.checks.find(c=>c.name==='clearance');
+
+document.getElementById('passlab').innerHTML=D.report.pass?'PASS<br>▲ GREEN':'FAIL<br>▲ RED';
+/* VU needle: pass → ~72°, sweep -45..45 */
+const nd=document.getElementById('needle');
+nd.style.transform=`rotate(${D.report.pass?28:-30}deg)`;
+
+document.getElementById('ch1').textContent=f2(totalMass/1000)+' kg';
+document.getElementById('ch1s').textContent=D.measures.length+' parts · ρ-weighted sum';
+document.getElementById('ch2').textContent=f2(stab.measured)+' mm';
+document.getElementById('ch3').textContent=f2(clr.measured)+' mm';
+document.getElementById('ch3s').textContent='limit '+D.spec.tests.min_clearance_mm+' mm — margin '+(f1(clr.measured-D.spec.tests.min_clearance_mm))+' mm';
+
+document.getElementById('osdTL').textContent='M '+f1(D.report.timingMs)+'ms · ACQ:VERIFICATION';
+document.getElementById('osdTR').textContent=D.report.pass?'● PASS':'● FAIL';
+document.getElementById('osdBL').textContent='CH1 500g/div · CH2 10mm/div';
+document.getElementById('osdBR').textContent=D.spec.name+' · '+D.spec.parts.length+' PARTS';
+
+/* self-test list */
+document.getElementById('checks').innerHTML=D.report.checks.map(c=>`
+  <div class="st"><span class="led" style="${c.status!=='pass'?'background:#ff5348;box-shadow:0 0 7px #ff5348':''}"></span>
+  <span class="nm">${esc(c.name)}</span><span class="mv">${c.measured?f2(c.measured):'—'}</span>
+  <span style="color:${c.status==='pass'?'#52ff8a':'#ff5348'};font-size:10px">${esc(c.status.toUpperCase())}</span></div>`).join('');
+
+/* per-part knobs: pointer angle ∝ mass share */
+const maxM=Math.max(...D.measures.map(m=>m.massG));
+document.getElementById('knobs').innerHTML=D.measures.map(m=>{
+  const ang=-135+(m.massG/maxM)*270;
+  const shp=m.shape==='box'?m.dims.join('×'):`⌀${f1(m.dims[0])}×${f1(m.dims[2])}`;
+  return `<div class="knobcell"><div class="knob"><div class="ptr" style="transform:translateX(-50%) rotate(${ang}deg)"></div></div>
+    <div class="klab"><b>${esc(m.id.toUpperCase())}</b>${esc(m.material)}<br>${esc(shp)} · ${f1(m.massG)}g</div></div>`;
+}).join('');
+
+/* synthetic trace: stepped waveform of part masses */
+const tv=document.getElementById('trace');
+let pts='',x=4;
+D.measures.forEach((m,i)=>{const h=26-(m.massG/maxM)*22;const w=88/D.measures.length;
+  pts+=`${x},${h} ${x+w-3},${h} `;x+=w;});
+tv.innerHTML=`<polyline points="${pts}" fill="none" stroke="#52ff8a" stroke-width="1.2"
+  style="filter:drop-shadow(0 0 4px #52ff8a)"/>`;
+
+/* io */
+const bi=document.getElementById('brief');bi.value=D.brief;
+const term=document.getElementById('term');
+term.innerHTML=D.log.map(l=>`<div>&gt; ${esc(l)}</div>`).join('');
+document.getElementById('acq').onclick=()=>{term.innerHTML+=`<div>&gt; brief ▸ ${esc(bi.value)}</div>`;term.scrollTop=1e6;};
+term.scrollTop=1e6;
+</script>
+</body>
+</html>

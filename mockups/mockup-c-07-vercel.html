@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1700">
+<title>desk-lamp – inkbench</title>
+<style>
+:root{
+  --bg:#000; --panel:#0a0a0a; --panel2:#111;
+  --line:#1f1f1f; --line2:#2e2e2e;
+  --txt:#ededed; --mut:#a1a1a1; --dim:#666;
+  --ok:#fff;
+  --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--txt);overflow:hidden;display:flex;flex-direction:column;
+  font:13.5px/1.5 "Geist","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit;color:inherit}
+::selection{background:#333}
+:focus-visible{outline:1.5px solid #fff;outline-offset:2px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* faint vertical grid lines over whole page */
+#gridlines{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:170px 100%;background-position:center}
+
+/* ---------- nav ---------- */
+#nav{height:52px;flex:0 0 52px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+  gap:0;padding:0 20px;position:relative;z-index:5;background:var(--bg)}
+.tri{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;
+  border-bottom:14px solid #fff;margin-right:10px}
+#proj{display:flex;align-items:center;gap:8px;font-size:13.5px}
+#proj .org{color:var(--mut)}
+#proj .sep{color:var(--dim)}
+#proj .nm{font-weight:600}
+#proj .env{font:500 10.5px var(--mono);color:var(--mut);border:1px solid var(--line2);border-radius:99px;padding:2px 8px}
+#nav .r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.navlink{height:30px;padding:0 10px;border-radius:6px;color:var(--mut);font-size:13px;display:flex;align-items:center}
+.navlink:hover{background:var(--panel2);color:var(--txt)}
+.navlink:focus-visible{background:var(--panel2);color:var(--txt)}
+.av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#444,#111);border:1px solid var(--line2);
+  display:grid;place-items:center;font-size:9px;font-weight:700;color:#ccc}
+
+/* ---------- tabs ---------- */
+#tabs{height:46px;flex:0 0 46px;border-bottom:1px solid var(--line);display:flex;align-items:flex-end;
+  gap:2px;padding:0 20px;background:var(--bg);position:relative;z-index:5}
+.tab{height:45px;display:flex;align-items:center;gap:7px;padding:0 14px;color:var(--mut);font-size:13.5px;
+  border-bottom:2px solid transparent;cursor:pointer;transition:color .12s}
+.tab:hover{color:var(--txt)}
+.tab.on{color:var(--txt);border-bottom-color:#fff}
+.tab .n{font:500 10.5px var(--mono);color:var(--dim);background:var(--panel2);border-radius:99px;padding:1.5px 7px}
+.tab.on .n{color:var(--txt)}
+
+/* ---------- layout ---------- */
+#wrap{flex:1;min-height:0;display:flex;justify-content:center;overflow:hidden;position:relative;z-index:1}
+#cols{width:100%;max-width:1500px;display:flex;min-height:0;
+  border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.colA{flex:0 0 456px;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.colB{flex:1;min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+.colC{flex:0 0 400px;display:flex;flex-direction:column;min-height:0}
+
+.chead{height:42px;flex:0 0 42px;display:flex;align-items:center;gap:8px;padding:0 16px;
+  border-bottom:1px solid var(--line);font-size:12px;letter-spacing:.02em;color:var(--mut)}
+.chead .t{font-weight:600;color:var(--txt);text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.chead .x{margin-left:auto;font:500 10.5px var(--mono);color:var(--dim)}
+.cbody{flex:1;min-height:0;overflow-y:auto}
+
+/* deployment header band */
+#deploy{flex:0 0 auto;padding:22px 24px 18px;border-bottom:1px solid var(--line)}
+#dline{display:flex;align-items:center;gap:12px}
+#dline h1{font-size:22px;font-weight:650;letter-spacing:-.02em}
+.statuspill{display:flex;align-items:center;gap:7px;height:26px;padding:0 12px;border-radius:99px;
+  border:1px solid var(--line2);background:var(--panel);font-size:12px;font-weight:550}
+.statuspill .d{width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.envchip{font:500 11px var(--mono);color:var(--mut);border:1px solid var(--line);border-radius:5px;padding:2.5px 8px}
+#dmeta{display:flex;gap:18px;margin-top:10px;color:var(--mut);font-size:12.5px;flex-wrap:wrap}
+#dmeta .i{display:flex;align-items:center;gap:6px}
+#dmeta .i .ic{color:var(--dim)}
+#dmeta .mono{font-family:var(--mono);font-size:11.5px}
+#dline .r{margin-left:auto;display:flex;gap:8px}
+.btn{height:34px;padding:0 14px;border-radius:7px;font-size:13px;font-weight:550;
+  border:1px solid var(--line2);color:var(--txt);transition:all .12s;background:var(--bg)}
+.btn:hover{background:var(--panel2);border-color:#444}
+.btn.inv{background:#fff;color:#000;border-color:#fff}
+.btn.inv:hover{background:#ccc;border-color:#ccc}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* commit/brief strip */
+#commit{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--line)}
+#commit .av2{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#555,#222);
+  border:1px solid var(--line2);flex:0 0 28px}
+#commit .msg{flex:1;font-size:13.5px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#commit .msg small{display:block;color:var(--dim);font-size:11px;margin-top:1px}
+#briefrow{display:flex;gap:8px;align-items:center}
+#brief{width:270px;height:32px;background:var(--panel);border:1px solid var(--line2);border-radius:7px;
+  padding:0 10px;font-size:12.5px;transition:border-color .12s}
+#brief::placeholder{color:var(--dim)}
+#brief:focus{outline:none;border-color:#666}
+#go{height:32px;padding:0 14px;border-radius:7px;background:#fff;color:#000;font-weight:600;font-size:12.5px;transition:background .12s}
+#go:hover{background:#ccc}
+#go:disabled{opacity:.4;cursor:not-allowed}
+
+/* preview image */
+#prev{flex:1;display:grid;place-items:center;min-height:0;padding:20px;
+  background:
+   radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px);
+  background-size:18px 18px}
+#prev img{max-height:100%;max-width:100%;border:1px solid var(--line2);border-radius:8px;
+  box-shadow:0 20px 60px rgba(0,0,0,.7)}
+#prevfoot{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:11px 16px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--mut)}
+#prevfoot .mono{font-family:var(--mono);font-size:11px;color:var(--dim)}
+#prevfoot .vs{margin-left:auto;display:flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden}
+#prevfoot .vs button{padding:3px 10px;font-size:11px;color:var(--mut)}
+#prevfoot .vs button.on{background:#fff;color:#000;font-weight:600}
+#prevfoot .vs button:hover:not(.on){color:var(--txt)}
+
+/* spec rows (file-tree-ish) */
+.frow{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line);
+  font-size:12.5px;cursor:default;transition:background .1s}
+.frow:hover{background:var(--panel2)}
+.frow .fi{width:16px;text-align:center;color:var(--dim);font-size:11px}
+.frow .id{flex:0 0 110px;font-weight:550}
+.frow .sh{color:var(--mut);flex:0 0 70px}
+.frow .mt{color:var(--dim);flex:0 0 80px}
+.frow .sz{flex:1;font:11px var(--mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .ms{font:11px var(--mono);color:var(--mut);text-align:right}
+.frow.head{color:var(--dim);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;padding:7px 16px;background:var(--panel)}
+.frow.head:hover{background:var(--panel)}
+.jr{display:flex;align-items:center;gap:10px;padding:7px 16px;border-bottom:1px solid var(--line);font-size:12px;transition:background .1s}
+.jr:hover{background:var(--panel2)}
+.jr .ty{font:500 10.5px var(--mono);color:var(--mut);border:1px solid var(--line2);border-radius:4px;padding:1.5px 6px}
+.jr .ab{flex:1;color:var(--txt)}
+.jr .ax{font:10.5px var(--mono);color:var(--dim)}
+
+/* checks */
+.ck{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);cursor:default;transition:background .1s}
+.ck:hover{background:var(--panel2)}
+.ck .ci{width:18px;height:18px;border-radius:50%;border:1px solid #4d4d4d;flex:0 0 18px;
+  display:grid;place-items:center;font-size:10px;color:#fff}
+.ck .mid{flex:1;min-width:0}
+.ck .nm{font-size:13px;font-weight:550}
+.ck .dt{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.ck .ms{font:10.5px var(--mono);color:var(--mut);border:1px solid var(--line);border-radius:4px;padding:2px 7px;flex:0 0 auto}
+.cksum{padding:11px 16px;font-size:12px;color:var(--mut);border-bottom:1px solid var(--line);background:var(--panel)}
+.cksum b{color:#fff;font-family:var(--mono)}
+
+/* plan timeline */
+.pl{display:flex;gap:12px;padding:0 16px;position:relative}
+.pl::before{content:"";position:absolute;left:25px;top:0;bottom:0;width:1px;background:var(--line)}
+.pl:last-child::before{bottom:50%}
+.pl:first-child::before{top:50%}
+.pl .pt{width:19px;flex:0 0 19px;display:grid;place-items:center;padding:12px 0;position:relative;z-index:1}
+.pl .pt i{width:9px;height:9px;border-radius:50%;background:var(--bg);border:1.5px solid #666}
+.pl.done .pt i{background:#fff;border-color:#fff}
+.pl .pc{flex:1;padding:11px 0;border-bottom:1px solid var(--line);min-width:0}
+.pl:last-child .pc{border-bottom:0}
+.pl .pc .t{font-size:12.5px;font-weight:550;display:flex;align-items:center;gap:8px}
+.pl .pc .t .armtag{margin-left:auto;font:600 9.5px var(--mono);border:1px solid var(--line2);border-radius:4px;
+  padding:1.5px 6px;color:var(--mut)}
+.pl .pc .d{font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* log console */
+#console{flex:0 0 172px;border-top:1px solid var(--line);display:flex;flex-direction:column;background:var(--panel)}
+#console .chead{border-bottom:1px solid var(--line)}
+#clog{flex:1;overflow-y:auto;padding:10px 16px;font:11.5px/1.75 var(--mono);color:var(--mut)}
+#clog .g{color:#fff}
+#clog .c{color:#bbb}
+#clog .d{color:var(--dim)}
+#clog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+<div id="gridlines"></div>
+
+<nav id="nav">
+  <span class="tri"></span>
+  <div id="proj"><span class="org">inkbench</span><span class="sep">/</span><span class="nm" id="projname"></span><span class="env">main</span></div>
+  <div class="r">
+    <button class="navlink">Feedback</button>
+    <button class="navlink">Changelog</button>
+    <button class="navlink">Docs</button>
+    <div class="av">DV</div>
+  </div>
+</nav>
+
+<div id="tabs">
+  <div class="tab on">Overview</div>
+  <div class="tab">Specification <span class="n" id="t-spec"></span></div>
+  <div class="tab">Checks <span class="n" id="t-ck"></span></div>
+  <div class="tab">Build plan <span class="n" id="t-pl"></span></div>
+  <div class="tab">Logs</div>
+  <div class="tab">Settings</div>
+</div>
+
+<div id="wrap"><div id="cols">
+  <!-- A: preview -->
+  <div class="colA">
+    <div class="chead"><span class="t">Preview</span><span class="x" id="pvx"></span></div>
+    <div class="cbody" style="display:flex;flex-direction:column;overflow:hidden">
+      <div id="deploy">
+        <div id="dline">
+          <h1 id="dtitle"></h1>
+          <span class="statuspill"><span class="d"></span><span id="dstatus"></span></span>
+          <div class="r"><button class="btn">Visit</button><button class="btn inv" id="redep">Redeploy</button></div>
+        </div>
+        <div id="dmeta"></div>
+      </div>
+      <div id="prev"><img src="lamp_flat.png" alt="render preview" id="previmg"></div>
+      <div id="prevfoot">
+        <span id="prevname"></span><span class="mono" id="prevmeta"></span>
+        <div class="vs"><button class="on" data-i="lamp_flat.png">asm</button><button data-i="lamp_exploded.png">xpl</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: spec + checks -->
+  <div class="colB">
+    <div id="commit">
+      <span class="av2"></span>
+      <span class="msg" id="cmsg"></span>
+      <div id="briefrow"><input id="brief" spellcheck="false" placeholder="New brief — describe a mechanism…"><button id="go">Deploy</button></div>
+    </div>
+    <div class="chead"><span class="t">Source — spec.parts</span><span class="x" id="specx"></span></div>
+    <div class="cbody" id="specbody" style="flex:0 0 218px"></div>
+    <div class="chead"><span class="t">Checks</span><span class="x" id="ckx"></span></div>
+    <div class="cbody" id="ckbody"></div>
+  </div>
+
+  <!-- C: plan + console -->
+  <div class="colC">
+    <div class="chead"><span class="t">Build plan — arms</span><span class="x" id="plx"></span></div>
+    <div class="cbody" id="planbody" style="padding:6px 0"></div>
+    <div id="console">
+      <div class="chead"><span class="t">Runtime logs</span><span class="x">stderr · live</span></div>
+      <div id="clog"></div>
+    </div>
+  </div>
+</div></div>
+
+<script src="data.js"></script>
+<script>
+const D=window.DATA,$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const checks=D.report.checks,passed=checks.filter(c=>c.status==='pass').length;
+const fig=D.figures[0];
+const v3=v=>'('+v.map(n=>(+n).toFixed(0)).join(',')+')';
+const totalMass=D.measures.reduce((s,m)=>s+m.massG,0);
+
+/* header */
+$('#projname').textContent=fig.name.toLowerCase().replace(/\s/g,'-');
+$('#t-spec').textContent=D.spec.parts.length;
+$('#t-ck').textContent=passed+'/'+checks.length;
+$('#t-pl').textContent=D.plan.length;
+$('#dtitle').textContent=fig.name.toLowerCase().replace(/\s/g,'-')+'.fig';
+$('#dstatus').textContent=D.report.pass?'Ready':'Error';
+$('#dmeta').innerHTML=`
+  <span class="i"><span class="ic">⑂</span><span class="mono">main</span></span>
+  <span class="i"><span class="ic">◈</span><span class="mono">fig${fig.figNum}-${Math.abs(fig.name.split('').reduce((a,c)=>a*31+c.charCodeAt(0)|0,7)%0xffff).toString(16)}</span></span>
+  <span class="i"><span class="ic">◷</span>evaluated in ${D.report.timingMs.toFixed(1)}ms</span>
+  <span class="i"><span class="ic">◆</span>${(totalMass/1000).toFixed(2)}kg</span>
+  <span class="i"><span class="ic">▣</span>attempt ${D.attempts}</span>`;
+$('#pvx').textContent='toon · '+D.spec.units;
+$('#prevname').textContent=fig.name+' — production render';
+$('#prevmeta').textContent=' 560×956 · '+fig.parts+' parts';
+$('#cmsg').innerHTML=esc(D.brief)+'<small>brief · submitted by inkbench-agent · '+D.attempts+' attempt(s)</small>';
+
+/* spec table */
+const sizeOf=p=>Array.isArray(p.size)?p.size.join(' × '):'r '+p.size.r+' · h '+p.size.h;
+const shapeIc={cylinder:'◯',box:'▢',cone:'△'};
+$('#specx').textContent=D.spec.parts.length+' files';
+let sh=`<div class="frow head"><span class="fi"></span><span class="id">part</span><span class="sh">shape</span><span class="mt">material</span><span class="sz">size @ position</span><span class="ms">mass</span></div>`;
+D.spec.parts.forEach(p=>{
+  const m=D.measures.find(x=>x.id===p.id);
+  sh+=`<div class="frow"><span class="fi">${shapeIc[p.shape]||'▢'}</span>
+    <span class="id">${esc(p.id)}</span><span class="sh">${esc(p.shape)}</span>
+    <span class="mt">${esc(p.material)}</span>
+    <span class="sz">${sizeOf(p)} @ ${v3(p.position)}</span>
+    <span class="ms">${m?Math.round(m.massG)+'g':''}</span></div>`;
+});
+D.spec.joints.forEach(j=>{
+  sh+=`<div class="jr"><span class="ty">${esc(j.type)}</span>
+    <span class="ab">${esc(j.a)} ↔ ${esc(j.b)}</span>
+    <span class="ax">axis ${v3(j.axis)} · ${v3(j.anchor)}</span></div>`;
+});
+$('#specbody').innerHTML=sh;
+
+/* checks */
+$('#ckx').textContent=D.report.pass?'all passed':'failures';
+$('#ckbody').innerHTML=
+  `<div class="cksum">${D.report.pass?'✓':'✗'} <b>${passed}/${checks.length}</b> checks · geometric verification · ${D.report.timingMs.toFixed(1)}ms</div>`+
+  checks.map(c=>`
+    <div class="ck"><span class="ci">${c.status==='pass'?'✓':'✗'}</span>
+      <div class="mid"><div class="nm">${esc(c.name)}</div>
+      <div class="dt" title="${esc(c.detail)}">${esc(c.detail)}</div></div>
+      ${c.measured?`<span class="ms">${(+c.measured).toFixed(2)}</span>`:''}</div>`).join('');
+
+/* plan */
+$('#plx').textContent=D.plan.filter(o=>o.kind==='place').length+' places · 2 arms';
+$('#planbody').innerHTML=D.plan.map(op=>{
+  if(op.kind==='place'){
+    return `<div class="pl done"><span class="pt"><i></i></span>
+      <div class="pc"><div class="t">${op.glyph} place <b>&nbsp;${esc(op.part)}</b><span class="armtag">ARM ${op.arm}</span></div>
+      <div class="d">seat ${v3(op.seat)} · ${Math.round(op.massG)}g · from ${v3(op.insert_from)}</div></div></div>`;
+  }
+  return `<div class="pl done"><span class="pt"><i style="border-radius:0;transform:rotate(45deg)"></i></span>
+    <div class="pc"><div class="t" style="color:var(--mut)">joint — ${esc(op.a)} ↔ ${esc(op.b)}<span class="armtag">${esc(op.type)}</span></div>
+    <div class="d">anchor ${v3(op.anchor)} · axis ${v3(op.axis)}${op.late?' · late':''}</div></div></div>`;
+}).join('');
+
+/* console */
+const clog=$('#clog');
+function logLine(t,cls){
+  const d=document.createElement('div');if(cls)d.className=cls;
+  d.innerHTML='<span class="d">['+new Date().toTimeString().slice(0,8)+']</span> '+esc(t);
+  clog.appendChild(d);clog.scrollTop=clog.scrollHeight;
+}
+D.log.forEach(l=>{let c='';if(/pass|✓|verified/i.test(l))c='g';else if(/▸/.test(l))c='c';logLine(l,c)});
+logLine('deployment ready — '+fig.name.toLowerCase().replace(/\s/g,'-')+'.fig','g');
+
+/* interactions */
+const brief=$('#brief'),go=$('#go');brief.value=D.brief;
+function submit(btn){
+  const v=brief.value.trim();if(!v)return;
+  btn.disabled=true;const old=btn.textContent;btn.textContent='Queued…';
+  logLine('brief ▸ '+v,'c');logLine('designing…');
+  setTimeout(()=>{btn.disabled=false;btn.textContent=old},1000);
+}
+go.addEventListener('click',()=>submit(go));
+$('#redep').addEventListener('click',function(){submit(this)});
+brief.addEventListener('keydown',e=>{if(e.key==='Enter')submit(go)});
+document.querySelectorAll('#prevfoot .vs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#prevfoot .vs button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');$('#previmg').src=b.dataset.i;
+}));
+document.querySelectorAll('#tabs .tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+}));
+</script>
+</body>
+</html>

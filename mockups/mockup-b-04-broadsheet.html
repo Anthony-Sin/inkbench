@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — The Daily Verify</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@400;600&display=swap">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#c9c2ae}
+  body{font-family:Georgia,"Times New Roman",serif;color:#1e1b14}
+  #stage{position:absolute;left:50%;top:50%;width:1700px;height:900px;transform:translate(-50%,-50%);
+    background:#efe9d7;box-shadow:0 18px 60px rgba(0,0,0,.35);padding:18px 30px 14px}
+  .masthead{text-align:center;border-bottom:3px double #1e1b14;padding-bottom:10px;position:relative}
+  .masthead h1{font-family:"Playfair Display",serif;font-weight:900;font-size:64px;letter-spacing:2px;line-height:1}
+  .masthead .rule{display:flex;justify-content:space-between;font-family:Oswald,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;border-top:1px solid #1e1b14;border-bottom:1px solid #1e1b14;margin-top:8px;padding:4px 2px}
+  .headline{text-align:center;padding:12px 0 10px;border-bottom:1px solid #1e1b14}
+  .headline h2{font-family:"Playfair Display",serif;font-weight:900;font-size:64px;letter-spacing:1px;line-height:1}
+  .headline .sub{font-family:Oswald,sans-serif;font-size:14px;letter-spacing:1px;margin-top:8px;text-transform:uppercase}
+  .headline .sub i{font-style:normal;color:#8f2015}
+  .main{display:grid;grid-template-columns:400px 330px 1fr 330px;gap:0;height:486px;border-bottom:3px double #1e1b14}
+  .col{padding:12px 18px;border-right:1px solid #b3a984;overflow:hidden}
+  .col:last-child{border-right:0}
+  .kick{font-family:Oswald,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#8f2015;margin-bottom:6px}
+  .story h3{font-family:"Playfair Display",serif;font-size:23px;line-height:1.15;margin-bottom:8px}
+  .story p{font-size:12.8px;line-height:1.58;text-align:justify;margin-bottom:8px}
+  .story p:first-of-type::first-letter{font-family:"Playfair Display",serif;font-size:46px;float:left;line-height:.85;padding:3px 6px 0 0;font-weight:700}
+  .byline{font-size:10.5px;font-style:italic;margin-bottom:8px}
+  .photo{position:relative;border:1px solid #1e1b14;padding:5px;background:#e6dfc9}
+  .photo img{display:block;width:100%;height:330px;object-fit:cover;filter:sepia(.35) contrast(1.08)}
+  .photo::after{content:"";position:absolute;inset:5px;background-image:radial-gradient(rgba(30,27,20,.35) .6px,transparent .7px);background-size:3px 3px;mix-blend-mode:multiply;pointer-events:none}
+  .cap2{font-size:10.5px;font-style:italic;margin-top:6px;line-height:1.4}
+  .boxhead{font-family:Oswald,sans-serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid #1e1b14;padding-bottom:4px;margin-bottom:8px}
+  .trial{display:flex;gap:8px;font-size:11.5px;padding:5px 0;border-bottom:1px solid #b3a984;align-items:baseline}
+  .trial .v{font-family:Oswald,sans-serif;font-weight:600;color:#8f2015;width:52px;flex:none;letter-spacing:1px}
+  .trial .d{font-size:10px;font-style:italic;opacity:.75;display:block}
+  .spectab{width:100%;border-collapse:collapse;font-size:11.5px}
+  .spectab th{font-family:Oswald,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;text-align:left;border-bottom:1.5px solid #1e1b14;padding:3px 4px}
+  .spectab td{border-bottom:1px solid #b3a984;padding:4px;font-size:11.5px}
+  .spectab td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+  .cond{font-size:11.5px;line-height:1.9;border:1px solid #1e1b14;padding:10px 12px;margin-bottom:12px}
+  .cond b{font-family:Oswald,sans-serif;letter-spacing:1px}
+  .coupon{border:2px dashed #1e1b14;padding:10px 12px;text-align:center}
+  .coupon .h{font-family:Oswald,sans-serif;font-size:12px;letter-spacing:2px}
+  .coupon p{font-size:11px;font-style:italic;margin:6px 0}
+  .coupon button{font-family:Oswald,sans-serif;background:#1e1b14;color:#efe9d7;border:0;font-size:11px;letter-spacing:2px;padding:7px 18px;cursor:pointer;transition:.15s}
+  .coupon button:hover{background:#8f2015}
+  .bottom{display:flex;height:206px}
+  .bc{padding:12px 18px;border-right:1px solid #b3a984;overflow:hidden}
+  .bc:last-child{border:0}
+  .roster{flex:1.4}
+  .roster table{width:100%;border-collapse:collapse;font-size:11px}
+  .roster th{font-family:Oswald,sans-serif;font-size:10px;letter-spacing:1.5px;text-align:left;border-bottom:1.5px solid #1e1b14;padding:3px 6px}
+  .roster td{border-bottom:1px solid #b3a984;padding:4.5px 6px}
+  .roster td.arm{font-family:Oswald,sans-serif;font-weight:600}
+  .roster tr.j td{font-style:italic;font-size:10.5px;color:#5c5442}
+  .wire{flex:1}
+  .wire .ln{font-size:11px;padding:3.5px 0;border-bottom:1px dotted #b3a984;font-style:italic}
+  .wire .ln::before{content:"⚡ ";font-style:normal}
+  .edition{width:300px;font-size:11px;line-height:1.7}
+  .edition .big{font-family:"Playfair Display",serif;font-size:17px;font-weight:700}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="masthead">
+    <h1>The Inkbench Gazette</h1>
+    <div class="rule"><span id="vol"></span><span>“From brief to build, while you wait.”</span><span id="price"></span></div>
+  </div>
+  <div class="headline">
+    <h2 id="hed"></h2>
+    <div class="sub" id="sub"></div>
+  </div>
+  <div class="main">
+    <div class="col story">
+      <div class="kick">Lead Dispatch</div>
+      <h3 id="storyH"></h3>
+      <div class="byline">By the INKBENCH DESK · Automated Correspondent</div>
+      <div id="story"></div>
+    </div>
+    <div class="col">
+      <div class="kick">Staff Photograph</div>
+      <div class="photo"><img src="lamp_flat.png" alt="the artefact"></div>
+      <div class="cap2" id="cap"></div>
+      <div class="kick" style="margin-top:10px">The Trials</div>
+      <div id="trials"></div>
+    </div>
+    <div class="col">
+      <div class="boxhead">The Specification at a Glance</div>
+      <table class="spectab" id="spectab"></table>
+      <div class="cap2" id="specNote" style="margin-top:8px"></div>
+    </div>
+    <div class="col">
+      <div class="boxhead">Conditions</div>
+      <div class="cond" id="cond"></div>
+      <div class="boxhead">Clip &amp; Send</div>
+      <div class="coupon">
+        <div class="h">ORDER AN ARTEFACT</div>
+        <p id="couponBrief"></p>
+        <button id="dispatch">TELEGRAPH BRIEF ▸</button>
+      </div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="bc roster"><div class="boxhead">Assembly Roster — Two Arms Engaged</div><table id="roster"></table></div>
+    <div class="bc wire"><div class="boxhead">Wire Dispatches</div><div id="wire"></div></div>
+    <div class="bc edition"><div class="big" id="edBig"></div><div id="ed"></div></div>
+  </div>
+</div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA,S=D.spec,R=D.report;
+const $=id=>document.getElementById(id);
+const f=(n,d=1)=>Number(n).toLocaleString('en-US',{maximumFractionDigits:d});
+const mass=g=>g>=1000?f(g/1000,2)+' kg':f(g,0)+' g';
+const dims=p=>p.shape==='box'?p.size.join('×'):'⌀'+(p.size.r*2)+'×'+p.size.h;
+const tot=D.measures.reduce((a,m)=>a+m.massG,0);
+const stab=R.checks.find(c=>c.name==='stability');
+
+$('vol').textContent=`VOL. I — № ${D.attempts} · FIG. ${D.figures[0].figNum}`;
+$('price').textContent=`PRICE: ONE BRIEF · ${f(R.timingMs,0)} MS VERIFYING`;
+$('hed').textContent=R.pass?'VERIFIED':'CONDEMNED';
+$('sub').innerHTML=`${S.name} clears <i>all ${R.checks.length} trials</i> at first asking — ${S.parts.length} parts, ${S.joints.length} joints, ${mass(tot)} — build plan issued to arms A &amp; B`;
+$('storyH').textContent=`“${D.brief}”`;
+$('story').innerHTML=
+ `<p>Commissioned on a single sentence, the ${S.name.toLowerCase()} rolled off the Inkbench workbench in ${f(R.timingMs,0)} milliseconds and one attempt. Inspectors on the floor report a ${S.parts.find(p=>p.id==='base').material} base of ${dims(S.parts[0])} ${S.units}, carrying a post, two articulated arms and a tilting shade — ${mass(tot)} in all.</p>`+
+ `<p>The geometry, drafted entirely by the resident agent, survived collision, stability and clearance review without a failure on the sheet. “It stood where it was put,” the bench reported, noting a ${f(stab?stab.measured:0,1)} ${S.units} margin before tipping.</p>`+
+ `<p>Two mechanical arms will divide the labour of assembly; the roster appears below. No rework is expected.</p>`;
+$('cap').textContent=`The artefact in assembled posture — ${S.name.toLowerCase()}, Fig. ${D.figures[0].figNum}. (Staff render, exploded view inside.)`;
+$('trials').innerHTML=R.checks.map(c=>
+ `<div class="trial"><span class="v">${c.status.toUpperCase()}</span><span>${c.name}<span class="d">${c.detail}</span></span></div>`).join('');
+$('spectab').innerHTML='<tr><th>Part</th><th>Form</th><th>Material</th><th>Extents</th><th style="text-align:right">Mass</th></tr>'+
+  D.measures.map(m=>`<tr><td><b>${m.id}</b></td><td>${m.shape}</td><td>${m.material}</td><td>${m.dims.map(d=>f(d,1)).join('×')}</td><td>${mass(m.massG)}</td></tr>`).join('')+
+  `<tr><td colspan="4"><b>Total</b></td><td><b>${mass(tot)}</b></td></tr>`;
+$('specNote').textContent='Joints — '+S.joints.map(j=>`${j.type}: ${j.a}~${j.b}`).join('; ');
+$('cond').innerHTML=`<b>UNITS</b> ${S.units} · <b>MIN CLEARANCE</b> ${S.tests.min_clearance_mm} ${S.units}<br><b>MAX TIP</b> ${S.tests.max_tip_angle_deg}° · <b>MATERIALS</b> ${Object.keys(S.materials).join(', ')}`;
+$('couponBrief').textContent=`“${D.brief}” — or write your own on the line below and dispatch it to the bench.`;
+$('roster').innerHTML='<tr><th>№</th><th>Operation</th><th>Arm</th><th>Detail</th></tr>'+
+  D.plan.map(s=>s.kind==='place'
+    ?`<tr><td>${s.step}</td><td>Place <b>${s.part}</b></td><td class="arm">${s.arm}</td><td>${s.glyph} insert · ${mass(s.massG)}</td></tr>`
+    :`<tr class="j"><td></td><td colspan="3">${s.type} joint — ${s.a} ~ ${s.b}</td></tr>`).join('');
+$('wire').innerHTML=D.log.map(l=>`<div class="ln">${l}</div>`).join('');
+$('edBig').textContent='Final Edition';
+$('ed').innerHTML=`All ${R.checks.length} examinations passed in ${f(R.timingMs,0)} ms.<br>Attempts on file: ${D.attempts}.<br>Failures reported: ${R.failures.length}.<br>Next artefact awaits a brief.`;
+$('dispatch').onclick=()=>{$('wire').innerHTML+=`<div class="ln">brief re-telegraphed ▸ ${D.brief}</div>`};
+
+const stage=document.getElementById('stage');
+function fit(){stage.style.transform=`translate(-50%,-50%) scale(${Math.min(innerWidth/1700,innerHeight/900)})`}
+addEventListener('resize',fit);fit();
+</script>
+</body>
+</html>

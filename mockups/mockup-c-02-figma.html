@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1700">
+<title>Desk Lamp.fig — INKBENCH</title>
+<style>
+:root{
+  --ui:#2c2c2c; --ui2:#383838; --ui3:#1e1e1e; --canvas:#232323;
+  --line:#3e3e3e; --line2:#4a4a4a;
+  --txt:#e6e6e6; --mut:#a0a0a0; --dim:#7a7a7a;
+  --acc:#0d99ff; --acc-soft:rgba(13,153,255,.18);
+  --ok:#14ae5c; --ok-soft:rgba(20,174,92,.16);
+  --warn:#f24822;
+  --r:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--ui3);color:var(--txt);overflow:hidden;display:flex;flex-direction:column;
+  font:11px/1.5 "Inter","SF Pro Text",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit;color:inherit}
+::selection{background:var(--acc-soft)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#4a4a4a;border-radius:5px;border:2px solid var(--ui)}
+::-webkit-scrollbar-track{background:transparent}
+
+/* top bar */
+#top{height:40px;flex:0 0 40px;background:var(--ui);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;position:relative;z-index:10}
+#top .left{display:flex;align-items:center;gap:8px;padding:0 12px;width:241px}
+.hamb{width:24px;height:24px;display:grid;place-items:center;border-radius:5px;color:var(--mut)}
+.hamb:hover{background:var(--ui2);color:var(--txt)}
+.fname{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbadge{font-size:10px;color:var(--mut);background:var(--ui2);border-radius:4px;padding:1px 6px;margin-left:6px}
+#toolbar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  display:flex;align-items:center;gap:2px;background:var(--ui2);border:1px solid var(--line);
+  border-radius:8px;padding:3px}
+.tool{width:30px;height:30px;display:grid;place-items:center;border-radius:6px;color:var(--mut);
+  font-size:13px;position:relative;transition:background .12s,color .12s}
+.tool:hover{background:#4a4a4a;color:var(--txt)}
+.tool.on{background:var(--acc);color:#fff}
+.tool .k{position:absolute;bottom:1px;right:3px;font-size:7.5px;color:inherit;opacity:.7}
+.tsep{width:1px;height:18px;background:var(--line2);margin:0 3px}
+#top .right{margin-left:auto;display:flex;align-items:center;gap:10px;padding:0 12px}
+.vstatus{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ok)}
+.vstatus .d{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.share{height:28px;padding:0 12px;border-radius:6px;background:var(--acc);color:#fff;font-weight:500;
+  transition:filter .12s}
+.share:hover{filter:brightness(1.1)}
+.share:active{transform:translateY(1px)}
+.avatar{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#9747ff,#0d99ff);
+  display:grid;place-items:center;font-size:9px;font-weight:600;color:#fff}
+
+/* main */
+#main{flex:1;display:flex;min-height:0}
+
+/* left panel */
+#left{width:241px;flex:0 0 241px;background:var(--ui);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;min-height:0}
+.ptabs{display:flex;border-bottom:1px solid var(--line)}
+.ptab{flex:1;height:32px;display:grid;place-items:center;font-size:11px;color:var(--mut);
+  border-bottom:2px solid transparent;cursor:pointer}
+.ptab.on{color:var(--txt);border-bottom-color:var(--txt)}
+#layers{flex:1;overflow-y:auto;padding:6px 0}
+.lay{display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;color:var(--mut);
+  cursor:pointer;user-select:none;border:1px solid transparent}
+.lay:hover{background:var(--ui2)}
+.lay.on{background:var(--acc-soft);color:var(--txt)}
+.lay.on .gi{color:var(--acc)}
+.lay .gi{width:14px;text-align:center;font-size:10px;flex:0 0 14px}
+.lay .sw{width:10px;height:10px;border-radius:2.5px;flex:0 0 10px}
+.lay .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.lay .meta{font-size:9.5px;color:var(--dim);font-family:"SF Mono",ui-monospace,Menlo,monospace}
+.lay.grp{color:var(--txt);font-weight:500}
+.lay.ind{padding-left:26px}
+.lay.ind2{padding-left:40px}
+#console{flex:0 0 auto;border-top:1px solid var(--line);background:var(--ui)}
+#console .ch{height:28px;display:flex;align-items:center;gap:6px;padding:0 10px;color:var(--mut);
+  font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
+#console .cl{max-height:118px;overflow-y:auto;padding:0 10px 8px;
+  font:10px/1.7 "SF Mono",ui-monospace,Menlo,Consolas,monospace;color:var(--mut)}
+#console .cl div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#console .cl .ok{color:var(--ok)}
+
+/* canvas */
+#canvas{flex:1;position:relative;overflow:hidden;
+  background:var(--canvas) radial-gradient(#2e2e2e 1px,transparent 1.05px);background-size:20px 20px}
+.frame-card{position:absolute}
+.flabel{position:absolute;top:-22px;left:0;font-size:11px;color:var(--mut);display:flex;gap:6px;align-items:center}
+.flabel .fid{color:var(--dim)}
+.frame-card .img{border-radius:2px;box-shadow:0 8px 30px rgba(0,0,0,.45);display:block;background:#1a1a1a}
+.frame-card.sel .img{outline:1.5px solid var(--acc);outline-offset:0}
+.handle{position:absolute;width:8px;height:8px;background:#fff;border:1.5px solid var(--acc);border-radius:1.5px;display:none}
+.frame-card.sel .handle{display:block}
+.h-tl{top:-4px;left:-4px}.h-tr{top:-4px;right:-4px}.h-bl{bottom:-4px;left:-4px}.h-br{bottom:-4px;right:-4px}
+#f1{top:52%;left:46%;transform:translate(-50%,-50%)}
+#f1 .img{height:640px;width:auto}
+#f2{top:32%;right:5%}
+#f2 .img{height:360px;width:auto;opacity:.96}
+#f2 .flabel{top:auto;bottom:-24px}
+#zoom{position:absolute;right:16px;bottom:16px;display:flex;align-items:center;gap:2px;
+  background:var(--ui2);border:1px solid var(--line);border-radius:8px;padding:3px;z-index:5}
+#zoom button{min-width:28px;height:26px;border-radius:5px;color:var(--mut);font-size:12px}
+#zoom button:hover{background:#4a4a4a;color:var(--txt)}
+#zoom .pct{padding:0 8px;font-size:11px;color:var(--txt)}
+#comment{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;width:560px;
+  display:flex;align-items:center;gap:8px;background:var(--ui);border:1px solid var(--line2);
+  border-radius:22px;padding:5px 6px 5px 14px;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+#comment .cav{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#ff8a00,#f24822);
+  display:grid;place-items:center;font-size:8px;font-weight:700;color:#fff;flex:0 0 20px}
+#brief{flex:1;background:none;border:0;font-size:12px;height:30px;color:var(--txt)}
+#brief::placeholder{color:var(--dim)}
+#brief:focus{outline:none}
+#comment:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+#send{height:30px;padding:0 14px;border-radius:16px;background:var(--acc);color:#fff;font-size:11px;font-weight:600}
+#send:hover{filter:brightness(1.1)}
+#send:disabled{opacity:.5;cursor:default}
+
+/* right panel */
+#right{width:241px;flex:0 0 241px;background:var(--ui);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;min-height:0}
+.itabs{display:flex;border-bottom:1px solid var(--line)}
+.itab{flex:1;height:32px;display:grid;place-items:center;font-size:11px;color:var(--mut);cursor:pointer;
+  border-bottom:2px solid transparent}
+.itab.on{color:var(--txt);border-bottom-color:var(--txt)}
+#insp{flex:1;overflow-y:auto}
+.rsec{padding:10px 12px;border-bottom:1px solid var(--line)}
+.rsec h4{font-size:10px;font-weight:600;color:var(--mut);text-transform:none;letter-spacing:.02em;
+  margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.field{background:var(--ui2);border:1px solid transparent;border-radius:5px;height:28px;display:flex;
+  align-items:center;gap:6px;padding:0 8px;font-size:11px;color:var(--txt);cursor:default;
+  font-family:"SF Mono",ui-monospace,Menlo,monospace}
+.field:hover{border-color:var(--line2)}
+.field .fk{color:var(--dim);font-size:10px;font-family:"Inter",sans-serif}
+.field.fill{justify-content:flex-start}
+.field .fsw{width:14px;height:14px;border-radius:3px;border:1px solid rgba(255,255,255,.15)}
+.vrow{display:flex;align-items:center;gap:8px;min-height:26px;font-size:11px}
+.vrow .vn{flex:1;color:var(--txt)}
+.vrow .vm{font-size:9.5px;color:var(--dim);font-family:"SF Mono",ui-monospace,Menlo,monospace}
+.vi{width:14px;height:14px;border-radius:50%;display:grid;place-items:center;font-size:9px;
+  background:var(--ok-soft);color:var(--ok);flex:0 0 14px}
+.steprow{display:flex;align-items:center;gap:8px;min-height:26px;font-size:11px}
+.steprow .sn{width:16px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--dim)}
+.steprow .sp{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arm{font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;font-family:"SF Mono",monospace}
+.arm.a{background:rgba(13,153,255,.16);color:#5cb2ff}
+.arm.b{background:rgba(151,71,255,.18);color:#b78aff}
+.jt{font-size:9.5px;color:var(--dim);border:1px dashed var(--line2);border-radius:4px;padding:1px 5px;
+  font-family:"SF Mono",ui-monospace,Menlo,monospace}
+.statusbar{height:26px;flex:0 0 26px;display:flex;align-items:center;gap:8px;padding:0 12px;
+  font-size:10.5px;color:var(--mut);border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <div class="left">
+    <button class="hamb" title="Menu">≡</button>
+    <div class="fname"><span id="ftitle"></span><span class="fbadge">figure</span></div>
+  </div>
+  <div id="toolbar">
+    <button class="tool on" title="Move (V)">⌖<span class="k">V</span></button>
+    <button class="tool" title="Frame (F)">▣<span class="k">F</span></button>
+    <div class="tsep"></div>
+    <button class="tool" title="Box part (B)">▭<span class="k">B</span></button>
+    <button class="tool" title="Cylinder (O)">◯<span class="k">O</span></button>
+    <button class="tool" title="Cone (K)">◮<span class="k">K</span></button>
+    <div class="tsep"></div>
+    <button class="tool" title="Joint (J)">⧉<span class="k">J</span></button>
+    <button class="tool" title="Comment (C)">✎<span class="k">C</span></button>
+  </div>
+  <div class="right">
+    <div class="vstatus"><span class="d"></span><span id="vtxt"></span></div>
+    <div class="avatar" title="inkbench agent">IK</div>
+    <button class="share">Share</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="left">
+    <div class="ptabs"><div class="ptab">Pages</div><div class="ptab on">Layers</div><div class="ptab">Assets</div></div>
+    <div id="layers"></div>
+    <div id="console">
+      <div class="ch" id="conh">▾ Agent console</div>
+      <div class="cl" id="conl"></div>
+    </div>
+  </div>
+
+  <div id="canvas">
+    <div class="frame-card sel" id="f1">
+      <div class="flabel"><span id="f1name"></span><span class="fid" id="f1id"></span></div>
+      <img class="img" src="lamp_flat.png" alt="Assembled render">
+      <div class="handle h-tl"></div><div class="handle h-tr"></div>
+      <div class="handle h-bl"></div><div class="handle h-br"></div>
+    </div>
+    <div class="frame-card" id="f2">
+      <img class="img" src="lamp_exploded.png" alt="Exploded view 75%">
+      <div class="flabel"><span>exploded · 75%</span><span class="fid">insert_from +z</span></div>
+    </div>
+    <div id="zoom">
+      <button title="Zoom out">−</button><span class="pct">64%</span><button title="Zoom in">+</button>
+      <button title="Zoom to fit">⇱</button>
+    </div>
+    <div id="comment">
+      <div class="cav">U</div>
+      <input id="brief" type="text" spellcheck="false" placeholder="Brief the agent… (Enter to submit)">
+      <button id="send">Submit</button>
+    </div>
+  </div>
+
+  <div id="right">
+    <div class="itabs"><div class="itab">Design</div><div class="itab">Prototype</div><div class="itab on">Inspect</div></div>
+    <div id="insp"></div>
+    <div class="statusbar" id="rsb"></div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const D=window.DATA,$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const v3=v=>v.map(n=>(+n).toFixed(1)).join(', ');
+const sizeOf=p=>Array.isArray(p.size)?p.size.join(' × '):'r'+p.size.r+' · h'+p.size.h;
+const mass=g=>g>=1000?(g/1000).toFixed(2)+' kg':Math.round(g)+' g';
+const matCol=m=>(D.spec.materials[m]||{}).color||'#888';
+const checks=D.report.checks;
+const passed=checks.filter(c=>c.status==='pass').length;
+const sel=D.spec.parts[4]; /* selected layer: shade */
+
+$('#ftitle').textContent=D.spec.name.toLowerCase().replace(/\s/g,'-')+'.fig';
+$('#vtxt').textContent=D.report.pass?('verified · '+passed+'/'+checks.length+' checks'):'verification failed';
+$('#f1name').textContent=D.spec.name;
+$('#f1id').textContent='FIG-'+D.figures[0].figNum+' · '+D.report.timingMs.toFixed(0)+'ms';
+$('#rsb').textContent=figMeta();
+function figMeta(){const f=D.figures[0];return f.parts+' parts · '+f.joints+' joints · attempt '+f.attempts+' · '+(D.report.pass?'PASS':'FAIL');}
+
+/* layers tree */
+const gl={box:'▭',cylinder:'◯',cone:'◮'};
+let lay=`<div class="lay grp"><span class="gi">▾</span><span class="nm">▣ ${esc(D.spec.name)}</span>
+  <span class="meta">${D.spec.parts.length}P ${D.spec.joints.length}J</span></div>`;
+D.spec.parts.forEach(p=>{
+  lay+=`<div class="lay ind ${p.id===sel.id?'on':''}" tabindex="0">
+    <span class="gi">${gl[p.shape]||'▭'}</span>
+    <span class="sw" style="background:${matCol(p.material)}"></span>
+    <span class="nm">${esc(p.id)}</span><span class="meta">${sizeOf(p)}</span></div>`;
+});
+lay+=`<div class="lay ind grp"><span class="gi">▾</span><span class="nm">joints</span>
+  <span class="meta">${D.spec.joints.length}</span></div>`;
+D.spec.joints.forEach(j=>{
+  lay+=`<div class="lay ind2"><span class="gi">${j.type==='fixed'?'⬢':'◍'}</span>
+    <span class="nm">${esc(j.a)} ↔ ${esc(j.b)}</span><span class="meta">${esc(j.type)}</span></div>`;
+});
+$('#layers').innerHTML=lay;
+
+/* right inspector */
+$('#insp').innerHTML=`
+<div class="rsec"><h4>▤ Selected layer — ${esc(sel.id)}</h4>
+  <div class="grid3">
+    <div class="field"><span class="fk">X</span>${sel.position[0]}</div>
+    <div class="field"><span class="fk">Y</span>${sel.position[1]}</div>
+    <div class="field"><span class="fk">Z</span>${sel.position[2]}</div>
+  </div>
+  <div style="height:6px"></div>
+  <div class="grid3">
+    <div class="field"><span class="fk">R°</span>${sel.rotation[0]}</div>
+    <div class="field"><span class="fk">R°</span>${sel.rotation[1]}</div>
+    <div class="field"><span class="fk">R°</span>${sel.rotation[2]}</div>
+  </div>
+</div>
+<div class="rsec"><h4>◧ Fill</h4>
+  <div class="grid2">
+    <div class="field fill"><span class="fsw" style="background:${matCol(sel.material)}"></span>${matCol(sel.material).toUpperCase()}</div>
+    <div class="field"><span class="fk">ρ</span>${D.spec.materials[sel.material].density} kg/m³</div>
+  </div>
+  <div style="height:6px"></div>
+  <div class="grid2">
+    <div class="field"><span class="fk">shape</span>${esc(sel.shape)}</div>
+    <div class="field"><span class="fk">mat</span>${esc(sel.material)}</div>
+  </div>
+  <div style="height:6px"></div>
+  <div class="field"><span class="fk">size</span>&nbsp;${sizeOf(sel)} mm</div>
+</div>
+<div class="rsec"><h4>✓ Verification <span style="margin-left:auto;color:${D.report.pass?'var(--ok)':'var(--warn)'}">${D.report.pass?'PASS':'FAIL'}</span></h4>
+  ${checks.map(c=>`<div class="vrow"><span class="vi">✓</span>
+    <span class="vn">${esc(c.name)}</span>
+    <span class="vm">${c.measured?(+c.measured).toFixed(1):'—'}</span></div>`).join('')}
+</div>
+<div class="rsec"><h4>⚒ Build plan — two arms</h4>
+  ${D.plan.map(op=>op.kind==='place'
+    ?`<div class="steprow"><span class="sn">${String(op.step).padStart(2,'0')}</span>
+      <span class="sp">${esc(op.part)} ${op.glyph} z${op.seat[2]}</span>
+      <span class="arm ${op.arm.toLowerCase().includes('b')?'b':'a'}">${op.arm}</span></div>`
+    :`<div class="steprow"><span class="sn">◇</span>
+      <span class="sp">${esc(op.a)}↔${esc(op.b)}</span><span class="jt">${esc(op.type)}</span></div>`).join('')}
+</div>
+<div class="rsec"><h4>⧉ Export</h4>
+  <div class="grid2">
+    <div class="field"><span class="fk">units</span>${D.spec.units}</div>
+    <div class="field"><span class="fk">tol</span>≥${D.spec.tests.min_clearance_mm}mm</div>
+  </div>
+  <div style="height:6px"></div>
+  <div class="field"><span class="fk">tip</span>&nbsp;≤${D.spec.tests.max_tip_angle_deg}°</div>
+</div>`;
+
+/* console (collapsed-by-default? keep open) */
+const conl=$('#conl');
+D.log.forEach(l=>{const d=document.createElement('div');if(/pass|✓|verified/i.test(l))d.className='ok';d.textContent=l;conl.appendChild(d)});
+$('#conh').addEventListener('click',()=>{
+  const open=conl.style.display!=='none';conl.style.display=open?'none':'block';
+  $('#conh').textContent=(open?'▸':'▾')+' Agent console';
+});
+
+/* brief */
+const brief=$('#brief'),send=$('#send');brief.value=D.brief;
+function submit(){
+  const v=brief.value.trim();if(!v)return;
+  send.disabled=true;send.textContent='Sent';
+  const d=document.createElement('div');d.textContent='brief ▸ '+v;conl.appendChild(d);
+  const d2=document.createElement('div');d2.textContent='designing…';conl.appendChild(d2);
+  conl.scrollTop=conl.scrollHeight;
+  setTimeout(()=>{send.disabled=false;send.textContent='Submit'},900);
+}
+send.addEventListener('click',submit);
+brief.addEventListener('keydown',e=>{if(e.key==='Enter')submit()});
+document.querySelectorAll('.lay.ind').forEach(el=>el.addEventListener('keydown',e=>{
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();document.querySelectorAll('.lay').forEach(x=>x.classList.remove('on'));el.classList.add('on')}
+}));
+</script>
+</body>
+</html>

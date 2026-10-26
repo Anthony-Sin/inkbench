@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Transit Map</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1700px; height: 900px; overflow: hidden; }
+  body {
+    background: #f3efe4; color: #2c2a24;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px; display: flex; flex-direction: column;
+  }
+  .mono { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; }
+
+  /* ---------- header ---------- */
+  #head {
+    height: 62px; flex: none; display: flex; align-items: center; gap: 20px;
+    background: #17475f; color: #eaf3f8; padding: 0 22px;
+    border-bottom: 4px solid #0f97a0;
+  }
+  #head .logo { font-size: 16px; font-weight: 800; letter-spacing: .1em; }
+  #head .logo i { color: #7dd3fc; font-style: normal; }
+  #head .linechip {
+    font-size: 9.5px; letter-spacing: .2em; background: #0f97a0; color: #fff;
+    padding: 4px 12px; border-radius: 20px; font-weight: 700;
+  }
+  #journey { flex: 1; display: flex; gap: 8px; max-width: 640px; margin-left: auto; }
+  #journey input {
+    flex: 1; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 20px; color: #fff; font-size: 11.5px; padding: 8px 16px; outline: none;
+    font-family: inherit;
+  }
+  #journey input::placeholder { color: rgba(255,255,255,.55); }
+  #journey input:focus { border-color: #7dd3fc; background: rgba(255,255,255,.18); }
+  #journey button {
+    background: #f59e0b; color: #241a05; border: none; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: .1em; padding: 0 18px;
+    cursor: pointer; font-family: inherit; text-transform: uppercase;
+  }
+  #journey button:hover { background: #fbbf24; }
+  #svc {
+    font-size: 10px; letter-spacing: .18em; padding: 6px 14px; border-radius: 20px;
+    background: #d1f0d8; color: #1c6b35; font-weight: 700; flex: none;
+  }
+  #svc.bad { background: #fbd5d5; color: #9c1f1f; }
+
+  /* ---------- content ---------- */
+  #content { flex: 1; display: flex; min-height: 0; }
+
+  /* left column: poster + status + legend */
+  #left { width: 500px; flex: none; padding: 20px 18px 14px; overflow: hidden; display: flex; flex-direction: column; gap: 14px; }
+  #poster {
+    background: #1b2732; border-radius: 10px; padding: 14px; flex: none;
+    box-shadow: 0 8px 22px rgba(60,50,30,.25); border: 1px solid #d8d0bc;
+  }
+  #poster .pf { background: #0c141b; border-radius: 6px; overflow: hidden; height: 330px; display: flex; align-items: center; justify-content: center; }
+  #poster img { max-height: 94%; max-width: 94%; object-fit: contain; }
+  #poster .cap {
+    display: flex; justify-content: space-between; margin-top: 10px;
+    font-size: 9.5px; letter-spacing: .2em; color: #9db7c6; text-transform: uppercase;
+  }
+  .board {
+    background: #fffdf6; border: 1px solid #ddd4ba; border-radius: 8px;
+    padding: 12px 14px; box-shadow: 0 4px 12px rgba(60,50,30,.12);
+  }
+  .board h5 {
+    font-size: 9px; letter-spacing: .26em; color: #0f97a0; text-transform: uppercase;
+    margin-bottom: 8px; display: flex; justify-content: space-between; font-weight: 700;
+  }
+  .board h5 .dim { color: #a89e82; letter-spacing: .1em; }
+  .svcrow { display: flex; align-items: center; gap: 9px; font-size: 11.5px; padding: 4px 0; border-bottom: 1px dashed #e8e0ca; cursor: default; }
+  .svcrow:hover { background: #faf6ea; }
+  .svcrow .dot { width: 9px; height: 9px; border-radius: 50%; background: #2f9e4f; flex: none; }
+  .svcrow .dot.f { background: #d63c3c; }
+  .svcrow .n { text-transform: capitalize; font-weight: 600; color: #3a362c; }
+  .svcrow .gs { margin-left: auto; font-size: 9px; color: #2f9e4f; letter-spacing: .12em; font-weight: 700; }
+  .svcrow .ms { font-size: 9px; color: #a89e82; font-family: ui-monospace, Menlo, monospace; }
+  .legrow { display: flex; align-items: center; gap: 10px; font-size: 10.5px; color: #5a5344; padding: 3px 0; }
+  .legrow .swline { width: 34px; height: 0; border-top: 5px solid #0f97a0; border-radius: 3px; flex: none; }
+  .legrow .swline.dash { border-top: 3px dashed #8b5cf6; }
+  .armlet {
+    width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center;
+    justify-content: center; font-size: 9.5px; font-weight: 800; color: #fff; flex: none;
+  }
+  .armlet.A { background: #e0741f; } .armlet.B { background: #b84a8a; }
+  .legrow .stn { width: 14px; height: 14px; border-radius: 50%; border: 3px solid #0f97a0; background: #fff; flex: none; }
+
+  /* ---------- map ---------- */
+  #map { flex: 1; position: relative; min-width: 0; overflow: hidden; }
+  #map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .mapbg-title {
+    position: absolute; right: 30px; top: 22px; text-align: right;
+    font-size: 11px; letter-spacing: .26em; color: #a89e82; text-transform: uppercase;
+  }
+  .mapbg-title b { display: block; font-size: 20px; color: #17475f; letter-spacing: .12em; }
+  .slabel { font-size: 13px; font-weight: 700; fill: #2c2a24; cursor: default; }
+  .smeta  { font-size: 9.5px; fill: #8b8168; font-family: ui-monospace, Menlo, monospace; text-anchor: end; cursor: default; }
+  .jlabel { font-size: 9.5px; fill: #7a5fc9; font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
+  .zlabel { font-size: 11px; fill: #cfc5a8; letter-spacing: .3em; font-weight: 700; }
+  .stationG:hover circle.halo { opacity: .25; }
+  .stationG circle.halo { opacity: 0; transition: opacity .15s; }
+
+  /* ---------- ticker ---------- */
+  #ticker {
+    height: 40px; flex: none; background: #17475f; color: #cfe3ee;
+    display: flex; align-items: center; overflow: hidden; border-top: 4px solid #0f97a0;
+  }
+  #ticker .th {
+    flex: none; background: #0f97a0; color: #fff; font-size: 9px; font-weight: 700;
+    letter-spacing: .22em; padding: 0 16px; height: 100%; display: flex; align-items: center;
+    text-transform: uppercase;
+  }
+  #tickerTxt { white-space: nowrap; font-size: 11px; font-family: ui-monospace, Menlo, monospace; padding-left: 18px; animation: tick 40s linear infinite; }
+  @keyframes tick { from { transform: translateX(100%);} to { transform: translateX(-100%);} }
+</style>
+</head>
+<body>
+  <div id="head">
+    <div class="logo">INK<i>BENCH</i> TRANSIT</div>
+    <div class="linechip" id="lineChip"></div>
+    <div id="journey">
+      <input id="briefIn" spellcheck="false" placeholder="where to?">
+      <button id="briefBtn">Plan ▸</button>
+    </div>
+    <div id="svc"></div>
+  </div>
+
+  <div id="content">
+    <div id="left">
+      <div id="poster">
+        <div class="pf"><img src="lamp_flat.png" alt="render poster"></div>
+        <div class="cap"><span id="capL"></span><span id="capR"></span></div>
+      </div>
+      <div class="board" id="svcBoard">
+        <h5>Service Status <span class="dim" id="svcTime"></span></h5>
+        <div id="svcRows"></div>
+      </div>
+      <div class="board" id="legend" style="flex:1;min-height:0;overflow:auto">
+        <h5>Legend <span class="dim">how to read</span></h5>
+        <div class="legrow"><span class="swline"></span>Assembly line — build order</div>
+        <div class="legrow"><span class="swline dash"></span>Joint service — connects parts</div>
+        <div class="legrow"><span class="stn"></span>Station — a part</div>
+        <div class="legrow"><span class="armlet A">A</span>ARM A places this part</div>
+        <div class="legrow"><span class="armlet B">B</span>ARM B places this part</div>
+        <div class="legrow" style="margin-top:8px;border-top:1px dashed #e8e0ca;padding-top:8px" id="legendMeta"></div>
+      </div>
+    </div>
+
+    <div id="map">
+      <div class="mapbg-title"><b id="mapTitle"></b><span id="mapSub"></span></div>
+      <svg id="mapSvg"></svg>
+    </div>
+  </div>
+
+  <div id="ticker"><div class="th">Service Updates</div><div id="tickerTxt"></div></div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  const D = window.DATA, $ = s => document.querySelector(s);
+  const fmtSize = s => Array.isArray(s) ? s.join('×') : ('⌀' + (s.r*2) + '×' + s.h);
+  const massOf = id => { const m = D.measures.find(m=>m.id===id); return m ? m.massG : 0; };
+  const ns = 'http://www.w3.org/2000/svg';
+  const el = (t,a)=>{ const e=document.createElementNS(ns,t); for(const k in a)e.setAttribute(k,a[k]); return e; };
+
+  /* header */
+  $('#lineChip').textContent = 'ASSEMBLY LINE · FIG ' + D.figures[0].figNum;
+  $('#briefIn').value = D.brief;
+  $('#svc').textContent = D.report.pass ? '● GOOD SERVICE' : '● DELAYS';
+  if (!D.report.pass) $('#svc').classList.add('bad');
+  $('#briefBtn').onclick = () => {
+    $('#tickerTxt').textContent += '   ●   brief ▸ ' + $('#briefIn').value;
+  };
+
+  /* poster */
+  $('#capL').textContent = 'Now showing · ' + D.spec.name;
+  $('#capR').textContent = D.spec.parts.length + ' parts · ' + D.report.timingMs + 'ms render-check';
+
+  /* service board = checks */
+  $('#svcTime').textContent = D.report.timingMs + 'ms';
+  $('#svcRows').innerHTML = D.report.checks.map(c =>
+    '<div class="svcrow" title="' + c.detail.replace(/"/g,'&quot;') + '">' +
+    '<span class="dot' + (c.status==='pass'?'':' f') + '"></span><span class="n">' + c.name + '</span>' +
+    '<span class="ms">' + (c.measured ? c.measured.toFixed(1) : '') + '</span>' +
+    '<span class="gs">' + (c.status==='pass' ? 'GOOD SERVICE' : 'SUSPENDED') + '</span></div>').join('');
+
+  /* legend meta */
+  $('#legendMeta').innerHTML = 'Zones = build stages · ' + D.spec.units + ' grid · attempt ' + D.attempts;
+
+  /* ---------- the map ---------- */
+  const svg = $('#mapSvg');
+  const W = 1200, H = 800;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+  /* fare zones */
+  svg.appendChild(el('rect', {x:60,y:40,width:760,height:440,rx:30,fill:'none',stroke:'#ddd2b4','stroke-width':1.5,'stroke-dasharray':'10 8'}));
+  svg.appendChild(el('rect', {x:60,y:40,width:760,height:720,rx:30,fill:'rgba(15,151,160,.04)',stroke:'#ddd2b4','stroke-width':1.5,'stroke-dasharray':'10 8'}));
+  const z1 = el('text',{x:90,y:75,class:'zlabel'}); z1.textContent='ZONE 1 · CHASSIS'; svg.appendChild(z1);
+  const z2 = el('text',{x:90,y:735,class:'zlabel'}); z2.textContent='ZONE 2 · OPTICS'; svg.appendChild(z2);
+
+  /* station geometry: gentle jog right mid-line, top→bottom = build order */
+  const order = D.report.explodedOrder;
+  const S = [
+    {x:170,y:120}, {x:170,y:300}, {x:170,y:470}, {x:330,y:590}, {x:330,y:720}
+  ];
+  /* main line path through stations */
+  const path = 'M' + S[0].x + ',' + S[0].y +
+    ' L' + S[1].x + ',' + S[1].y + ' L' + S[2].x + ',' + S[2].y +
+    ' C' + S[2].x + ',' + (S[2].y+80) + ' ' + S[3].x + ',' + (S[3].y-80) + ' ' + S[3].x + ',' + S[3].y +
+    ' L' + S[4].x + ',' + S[4].y;
+  /* terminus stubs */
+  svg.appendChild(el('path',{d:'M170,120 L170,80',stroke:'#0f97a0','stroke-width':8,'stroke-linecap':'round'}));
+  svg.appendChild(el('path',{d:path,fill:'none',stroke:'#0f97a0','stroke-width':8,'stroke-linecap':'round'}));
+  svg.appendChild(el('path',{d:'M330,720 L330,760',stroke:'#0f97a0','stroke-width':8,'stroke-linecap':'round'}));
+
+  /* joints = interchanges on segment midpoints → dashed purple spurs */
+  const mid = (a,b)=>({x:(a.x+b.x)/2, y:(a.y+b.y)/2});
+  D.spec.joints.forEach((j,i)=>{
+    const m = mid(S[i], S[i+1]);
+    const dir = (i%2===0) ? 1 : 1; /* spurs run right */
+    const ex = m.x + dir*210, ey = m.y;
+    svg.appendChild(el('line',{x1:m.x,y1:m.y,x2:ex,y2:ey,stroke:'#8b5cf6','stroke-width':3,'stroke-dasharray':'7 6'}));
+    svg.appendChild(el('circle',{cx:ex,cy:ey,r:7,fill:'#f3efe4',stroke:'#8b5cf6','stroke-width':3}));
+    /* tick across main line */
+    svg.appendChild(el('line',{x1:m.x-10,y1:m.y,x2:m.x+10,y2:m.y,stroke:'#8b5cf6','stroke-width':3}));
+    const t = el('text',{x:ex+16,y:ey+3.5,class:'jlabel'});
+    t.textContent = j.type.toUpperCase() + ' ' + j.a + '~' + j.b + ' @(' + j.anchor.join(',') + ')';
+    svg.appendChild(t);
+    /* little ⚿ on the line */
+    const g = el('text',{x:m.x-14,y:m.y-8,class:'jlabel','text-anchor':'end'});
+    g.textContent = '⚿'; svg.appendChild(g);
+  });
+
+  /* stations */
+  order.forEach((pid,i)=>{
+    const p = D.spec.parts.find(x=>x.id===pid);
+    const step = D.plan.find(s=>s.kind==='place' && s.part===pid);
+    const g = el('g',{class:'stationG'});
+    g.appendChild(el('circle',{class:'halo',cx:S[i].x,cy:S[i].y,r:22,fill:'#0f97a0'}));
+    g.appendChild(el('circle',{cx:S[i].x,cy:S[i].y,r:10,fill:'#fff',stroke:'#0f97a0','stroke-width':4}));
+    /* terminus bar on last */
+    if (i===order.length-1) g.appendChild(el('circle',{cx:S[i].x,cy:S[i].y,r:16,fill:'none',stroke:'#0f97a0','stroke-width':3}));
+    /* arm roundel left of circle */
+    const ax = S[i].x-34;
+    g.appendChild(el('circle',{cx:ax,cy:S[i].y,r:9,fill: step && step.arm==='B' ? '#b84a8a' : '#e0741f'}));
+    const at = el('text',{x:ax,y:S[i].y+3.5,'text-anchor':'middle','font-size':9,'font-weight':800,fill:'#fff'});
+    at.textContent = step ? step.arm : '?'; g.appendChild(at);
+    /* name right */
+    const nm = el('text',{x:S[i].x+22,y:S[i].y-2,class:'slabel'});
+    nm.textContent = (i+1) + '. ' + pid; g.appendChild(nm);
+    const mt = el('text',{x:S[i].x+22,y:S[i].y+13,class:'smeta',fill:'#8b8168','font-weight':400,style:'text-anchor:start'});
+    mt.textContent = p.shape + ' · ' + fmtSize(p.size) + ' ' + D.spec.units + ' · ' + p.material;
+    g.appendChild(mt);
+    /* meta left (mass) */
+    const ms = el('text',{x:S[i].x-52,y:S[i].y+3,class:'smeta'});
+    ms.textContent = massOf(pid).toFixed(0) + 'g ' + (step ? step.glyph : ''); g.appendChild(ms);
+    /* tooltip */
+    const title = el('title',{});
+    title.textContent = pid + ' — ' + p.shape + ' ' + fmtSize(p.size) + D.spec.units + ' · ' + p.material + ' · ' + massOf(pid).toFixed(0) + 'g · seat(' + (step?step.seat.join(','):'') + ')';
+    g.appendChild(title);
+    svg.appendChild(g);
+  });
+
+  /* insertion-direction compass */
+  svg.appendChild(el('line',{x1:1120,y1:120,x2:1120,y2:60,stroke:'#0f97a0','stroke-width':3}));
+  svg.appendChild(el('path',{d:'M1120,52 l-8,12 h16 z',fill:'#0f97a0'}));
+  const cp = el('text',{x:1120,y:140,'text-anchor':'middle','font-size':9.5,fill:'#8b8168','font-family':'ui-monospace,Menlo,monospace'});
+  cp.textContent = 'insert (' + D.spec.assembly[0].insert_from.join(',') + ')'; svg.appendChild(cp);
+
+  /* header-ish labels */
+  $('#mapTitle').textContent = D.spec.name + ' — Line Map';
+  $('#mapSub').textContent = D.spec.parts.length + ' stations · ' + D.spec.joints.length + ' interchanges';
+
+  /* ticker */
+  $('#tickerTxt').textContent = D.log.join('   ●   ') + '   ●   next departure: arm A · arm B · ' + D.report.timingMs + 'ms checks';
+})();
+</script>
+</body>
+</html>

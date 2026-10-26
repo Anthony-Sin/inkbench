@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Drafting Table</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1700px; height: 900px; overflow: hidden; }
+  body {
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.05), transparent 60%),
+      linear-gradient(145deg, #4a4139 0%, #3c352e 55%, #322c26 100%);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    position: relative;
+  }
+  .hand { font-family: "Caveat", "Segoe Script", cursive; }
+  .mono { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; }
+
+  /* ---------- cutting mat under everything ---------- */
+  #mat {
+    position: absolute; inset: 26px; border-radius: 6px;
+    background:
+      linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px),
+      linear-gradient(160deg, #2e4b42, #26423a);
+    background-size: 40px 40px, 40px 40px, 100% 100%;
+    box-shadow: inset 0 0 60px rgba(0,0,0,.4), 0 2px 0 rgba(255,255,255,.06);
+  }
+  #mat .matlabel {
+    position: absolute; top: 8px; right: 14px; font-size: 9px; letter-spacing: .3em;
+    color: rgba(255,255,255,.3); text-transform: uppercase;
+  }
+
+  /* ---------- the board ---------- */
+  #board {
+    position: absolute; left: 300px; top: 62px; width: 1090px; height: 730px;
+    transform: rotate(-2deg); transform-origin: 50% 50%;
+    background: linear-gradient(170deg, #f6efdd, #efe6cf 70%, #e9dfc6);
+    border: 1px solid #d8cba6;
+    box-shadow: 0 30px 60px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.35);
+  }
+  #board::before { /* inner border like a title-sheet margin */
+    content: ""; position: absolute; inset: 16px; border: 1px solid #c7b992; pointer-events: none;
+  }
+  .tape {
+    position: absolute; width: 96px; height: 28px;
+    background: rgba(240,228,180,.75); border-left: 1px dashed rgba(0,0,0,.12);
+    border-right: 1px dashed rgba(0,0,0,.12);
+    box-shadow: 0 2px 4px rgba(0,0,0,.15); z-index: 5;
+  }
+  #board img.render {
+    position: absolute; left: 50%; top: 44%; transform: translate(-50%,-50%);
+    height: 600px; filter: saturate(.96);
+  }
+  .pinline { position: absolute; pointer-events: none; }
+  .pinlabel {
+    position: absolute; font-size: 9px; letter-spacing: .16em; color: #8a7d5c;
+    text-transform: uppercase;
+  }
+  #titleblock {
+    position: absolute; right: 26px; bottom: 24px; width: 300px;
+    border: 1.5px solid #3a3226; background: rgba(255,255,255,.35);
+    font-size: 10px; color: #3a3226;
+  }
+  #titleblock .tbrow { display: flex; border-bottom: 1px solid #3a3226; }
+  #titleblock .tbrow:last-child { border-bottom: none; }
+  #titleblock .tbk { width: 84px; padding: 4px 8px; border-right: 1px solid #3a3226; font-size: 8px; letter-spacing: .14em; text-transform: uppercase; }
+  #titleblock .tbv { flex: 1; padding: 4px 8px; font-weight: 600; }
+  #stamp {
+    position: absolute; left: 40px; bottom: 46px; transform: rotate(-13deg);
+    border: 3px double #b03030; color: #b03030; border-radius: 6px;
+    padding: 8px 20px; font-size: 22px; font-weight: 800; letter-spacing: .28em;
+    opacity: .82; text-transform: uppercase;
+  }
+  #stamp .sub { font-size: 9px; letter-spacing: .2em; text-align: center; font-weight: 500; }
+  .handnote { position: absolute; color: #4a5bb5; font-size: 24px; line-height: 1; z-index: 4; }
+  .handnote .arr { display: block; font-size: 30px; }
+
+  /* ---------- steel ruler (left) ---------- */
+  #ruler {
+    position: absolute; left: 84px; top: 40px; width: 44px; height: 800px;
+    transform: rotate(1.4deg);
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.4) 0 1px, transparent 1px 10px),
+      repeating-linear-gradient(0deg, rgba(0,0,0,.55) 0 1px, transparent 1px 50px),
+      linear-gradient(90deg, #aab0b6, #d4d9dd 40%, #9aa0a7);
+    border-radius: 3px; box-shadow: 0 6px 16px rgba(0,0,0,.45);
+  }
+  #ruler .hole {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    width: 14px; height: 14px; border-radius: 50%; background: #2c3530;
+    box-shadow: inset 0 2px 3px rgba(0,0,0,.6);
+  }
+  #ruler .rlabel {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%) rotate(90deg);
+    font-size: 8px; letter-spacing: .3em; color: #555c63; white-space: nowrap;
+  }
+
+  /* ---------- pencil ---------- */
+  #pencil {
+    position: absolute; left: 162px; top: 690px; width: 250px; height: 16px;
+    transform: rotate(-7deg); display: flex; z-index: 3;
+    filter: drop-shadow(0 4px 5px rgba(0,0,0,.4));
+  }
+  #pencil .eraser { width: 22px; background: #d98a94; border-radius: 3px 0 0 3px; }
+  #pencil .band { width: 12px; background: linear-gradient(#cfd4d8,#8f959b,#cfd4d8); }
+  #pencil .barrel { flex: 1; background: linear-gradient(#e8b23c,#d19a26 50%,#b5811a); }
+  #pencil .wood { width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 26px solid #e6d3ae; }
+  #pencil .lead { position: absolute; right: -9px; top: 5px; width: 0; height: 0; border-top: 3px solid transparent; border-bottom: 3px solid transparent; border-left: 10px solid #3a3a3a; }
+
+  /* ---------- index card: brief ---------- */
+  #cardBrief {
+    position: absolute; left: 178px; top: 96px; width: 300px; min-height: 190px;
+    transform: rotate(-4deg); background: #fdf9ec;
+    background-image: repeating-linear-gradient(0deg, transparent 0 23px, #b7cfdd 23px 24px);
+    border: 1px solid #ddd2b4; box-shadow: 0 10px 22px rgba(0,0,0,.4); z-index: 8;
+    padding: 26px 18px 14px;
+  }
+  #cardBrief::before { /* red margin line */
+    content: ""; position: absolute; top: 0; bottom: 0; left: 26px; width: 1px; background: #e3a4a4;
+  }
+  #cardBrief h6 { font-size: 9px; letter-spacing: .26em; color: #8a7d5c; text-transform: uppercase; margin-bottom: 8px; padding-left: 14px; }
+  #cardBrief .btext { padding-left: 14px; font-size: 12.5px; line-height: 24px; color: #3a352c; }
+  #cardBrief input {
+    width: calc(100% - 14px); margin-left: 14px; margin-top: 8px; font-size: 11px;
+    border: none; border-bottom: 1.5px solid #b7cfdd; background: transparent;
+    color: #4a5bb5; font-family: "Caveat", cursive; font-size: 19px; outline: none; padding: 2px 2px;
+  }
+  #cardBrief input:focus { border-bottom-color: #4a5bb5; }
+  #cardBrief button {
+    margin: 10px 0 0 14px; background: #3a3226; color: #f6efdd; border: none;
+    font-size: 10px; letter-spacing: .18em; padding: 6px 14px; cursor: pointer;
+    text-transform: uppercase; font-family: inherit;
+  }
+  #cardBrief button:hover { background: #57493a; }
+  .pin {
+    position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+    width: 18px; height: 18px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ff8a8a, #c92f2f 65%, #8f1c1c);
+    box-shadow: 0 3px 5px rgba(0,0,0,.4); z-index: 9;
+  }
+
+  /* ---------- trace paper sheets (right) ---------- */
+  .trace {
+    position: absolute; width: 340px; z-index: 7;
+    background: rgba(250,250,246,.82); backdrop-filter: blur(1.5px);
+    border: 1px solid rgba(190,180,150,.8);
+    box-shadow: 0 14px 30px rgba(0,0,0,.38); padding: 14px 16px;
+    font-size: 11px; color: #3a352c;
+  }
+  .trace h6 { font-size: 9px; letter-spacing: .26em; color: #8a7d5c; text-transform: uppercase; border-bottom: 1px solid #c7b992; padding-bottom: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .trace table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .trace td { padding: 3px 4px; border-bottom: 1px solid rgba(199,185,146,.5); }
+  .trace tr:hover td { background: rgba(74,91,181,.07); }
+  .trace .id { font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: #4a5bb5; }
+  .trace .num { text-align: right; font-family: ui-monospace, Menlo, monospace; font-size: 9.5px; color: #7a7057; }
+  .trace .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  #trace1 { right: 66px; top: 88px; transform: rotate(3.4deg); }
+  #trace2 { right: 150px; top: 420px; transform: rotate(-2.6deg); }
+  .chkrow { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; border-bottom: 1px dashed rgba(199,185,146,.6); cursor: default; }
+  .chkrow:hover { background: rgba(74,91,181,.06); }
+  .chkrow .tick { color: #3e8a4f; font-weight: 700; font-family: "Caveat", cursive; font-size: 17px; line-height: 1; }
+  .chkrow .n { text-transform: capitalize; }
+  .chkrow .m { margin-left: auto; font-family: ui-monospace, Menlo, monospace; font-size: 9px; color: #7a7057; }
+  .jrow { font-family: ui-monospace, Menlo, monospace; font-size: 9.5px; color: #5a5142; padding: 2px 0; }
+  .jrow .ty { color: #4a5bb5; }
+
+  /* ---------- notepad: log ---------- */
+  #notepad {
+    position: absolute; left: 1480px; top: 660px; width: 190px; height: 210px;
+    transform: rotate(4deg); background: #fffdf4; z-index: 8;
+    box-shadow: 0 10px 22px rgba(0,0,0,.4); padding: 18px 12px 10px;
+    font-size: 10px;
+  }
+  #notepad::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 12px;
+    background: repeating-linear-gradient(90deg, #d8cba6 0 6px, transparent 6px 14px);
+  }
+  #notepad h6 { font-size: 8.5px; letter-spacing: .24em; color: #8a7d5c; text-transform: uppercase; margin-bottom: 6px; }
+  #notepad .lines { font-family: ui-monospace, Menlo, monospace; font-size: 8.8px; line-height: 1.9; color: #6b6152; }
+  #notepad .lines div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #notepad .lines div:last-child { color: #3e8a4f; font-weight: 700; }
+
+  /* ---------- pencil ledge: plan ---------- */
+  #ledge {
+    position: absolute; left: 420px; right: 60px; bottom: 26px; height: 84px;
+    background: linear-gradient(#6b5b49, #57493a 60%, #453a2e);
+    border-radius: 4px; box-shadow: 0 10px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);
+    display: flex; align-items: center; gap: 9px; padding: 0 18px; z-index: 6;
+  }
+  #ledge .lhead { font-size: 9px; letter-spacing: .26em; color: #cbbfa5; text-transform: uppercase; writing-mode: vertical-rl; transform: rotate(180deg); flex: none; }
+  .stepcard {
+    background: #fdf9ec; border: 1px solid #d8cba6; border-radius: 3px;
+    padding: 6px 10px 5px; min-width: 96px; box-shadow: 0 4px 8px rgba(0,0,0,.3);
+    transform: rotate(var(--r, 0deg)); cursor: default; position: relative;
+  }
+  .stepcard:hover { transform: rotate(0deg) translateY(-4px); }
+  .stepcard .sn { font-size: 8px; color: #8a7d5c; letter-spacing: .14em; }
+  .stepcard .sp { font-size: 12px; font-weight: 700; color: #3a3226; }
+  .stepcard .sm { font-size: 8.5px; color: #7a7057; font-family: ui-monospace, Menlo, monospace; }
+  .stepcard .armchip {
+    position: absolute; top: -7px; right: -6px; font-size: 8px; font-weight: 800;
+    padding: 1px 6px; border-radius: 8px; color: #fff;
+  }
+  .armchip.A { background: #3a7ca8; } .armchip.B { background: #b0527a; }
+  .jc { background: #efe6cf; border-style: dashed; opacity: .85; min-width: 74px; }
+  .jc .sp { font-size: 9.5px; font-weight: 500; font-family: ui-monospace, Menlo, monospace; }
+  #ledge .status { margin-left: auto; text-align: right; color: #cbbfa5; font-size: 9.5px; line-height: 1.7; letter-spacing: .1em; flex: none; }
+  #ledge .status b { color: #8fd6a0; letter-spacing: .2em; }
+</style>
+</head>
+<body>
+  <div id="mat"><div class="matlabel">INKBENCH · A0 CUTTING MAT · FIG <span id="figNum"></span></div></div>
+
+  <!-- the board -->
+  <div id="board">
+    <div class="tape" style="top:-12px;left:60px;transform:rotate(-38deg)"></div>
+    <div class="tape" style="top:-12px;right:70px;transform:rotate(34deg)"></div>
+    <div class="tape" style="bottom:-12px;left:110px;transform:rotate(30deg)"></div>
+    <div class="tape" style="bottom:-12px;right:50px;transform:rotate(-30deg)"></div>
+    <img class="render" src="lamp_flat.png" alt="lamp render">
+    <svg class="pinline" id="annoSvg" style="inset:0;width:100%;height:100%"></svg>
+    <div class="handnote" id="note1" style="right:150px;top:120px"></div>
+    <div class="handnote" id="note2" style="left:120px;bottom:170px"></div>
+    <div class="pinlabel" style="top:26px;left:30px">SHEET 01 — PERSPECTIVE · TOON</div>
+    <div class="pinlabel" style="top:26px;right:30px" id="sheetScale"></div>
+    <div id="titleblock"></div>
+    <div id="stamp"><div id="stampV"></div><div class="sub" id="stampSub"></div></div>
+  </div>
+
+  <!-- tools -->
+  <div id="ruler"><div class="hole"></div><div class="rlabel">STEEL RULE · 800mm</div></div>
+  <div id="pencil"><div class="eraser"></div><div class="band"></div><div class="barrel"></div><div class="wood"></div><div class="lead"></div></div>
+
+  <!-- brief card -->
+  <div id="cardBrief">
+    <div class="pin"></div>
+    <h6>Design Brief</h6>
+    <div class="btext" id="briefText"></div>
+    <input id="briefIn" spellcheck="false">
+    <button id="briefBtn">Re-draft ▸</button>
+  </div>
+
+  <!-- trace sheets -->
+  <div class="trace" id="trace1">
+    <h6><span>Spec Trace · Parts</span><span id="t1meta"></span></h6>
+    <table><tbody id="t1rows"></tbody></table>
+  </div>
+  <div class="trace" id="trace2">
+    <h6><span>Checks &amp; Joints</span><span id="t2meta"></span></h6>
+    <div id="t2checks"></div>
+    <div id="t2joints" style="margin-top:8px"></div>
+  </div>
+
+  <!-- notepad -->
+  <div id="notepad"><h6>Bench Log</h6><div class="lines" id="logLines"></div></div>
+
+  <!-- ledge -->
+  <div id="ledge">
+    <div class="lhead">BUILD ORDER</div>
+    <div id="ledgeSteps" style="display:flex;gap:9px;align-items:center"></div>
+    <div class="status" id="ledgeStatus"></div>
+  </div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  const D = window.DATA, $ = s => document.querySelector(s);
+  const fmtSize = s => Array.isArray(s) ? s.join('×') : ('⌀' + (s.r*2) + '×' + s.h);
+  const massOf = id => { const m = D.measures.find(m=>m.id===id); return m ? m.massG : 0; };
+  const stab = D.report.checks.find(c=>c.name==='stability');
+  const clr  = D.report.checks.find(c=>c.name==='clearance');
+
+  $('#figNum').textContent = D.figures[0].figNum;
+  $('#sheetScale').textContent = 'UNITS ' + D.spec.units.toUpperCase() + ' · ' + D.spec.parts.length + ' PARTS';
+
+  /* title block from spec */
+  $('#titleblock').innerHTML =
+    '<div class="tbrow"><div class="tbk">Title</div><div class="tbv">' + D.spec.name + '</div></div>' +
+    '<div class="tbrow"><div class="tbk">Figure</div><div class="tbv">#' + D.figures[0].figNum + ' · attempt ' + D.attempts + '</div></div>' +
+    '<div class="tbrow"><div class="tbk">Units</div><div class="tbv">' + D.spec.units + ' · ' + Object.keys(D.spec.materials).join(' / ') + '</div></div>' +
+    '<div class="tbrow"><div class="tbk">Mass</div><div class="tbv">' + (D.measures.reduce((a,m)=>a+m.massG,0)/1000).toFixed(2) + ' kg</div></div>';
+
+  /* stamp */
+  $('#stampV').textContent = D.report.pass ? 'PASS' : 'FAIL';
+  $('#stampSub').textContent = 'verified · ' + D.report.timingMs + 'ms';
+  if (!D.report.pass) { $('#stamp').style.borderColor = '#8a2020'; }
+
+  /* handwritten notes with leader lines on the sheet */
+  $('#note1').innerHTML = 'shade tilt 20°<span class="arr">↘</span>';
+  $('#note2').innerHTML = '<span class="arr">↗</span>heavy base — CoM ok';
+  const svg = $('#annoSvg');
+  svg.innerHTML =
+    '<line x1="76%" y1="19%" x2="63%" y2="12%" stroke="#4a5bb5" stroke-width="1.4"/>' +
+    '<circle cx="63%" cy="12%" r="3" fill="#4a5bb5"/>' +
+    '<line x1="17%" y1="76%" x2="44%" y2="86%" stroke="#4a5bb5" stroke-width="1.4"/>' +
+    '<circle cx="44%" cy="86%" r="3" fill="#4a5bb5"/>';
+
+  /* brief card */
+  $('#briefText').textContent = '“' + D.brief + '”';
+  $('#briefIn').value = D.brief;
+  $('#briefBtn').onclick = () => {
+    const l = document.createElement('div');
+    l.textContent = 'redraft ▸ ' + $('#briefIn').value.slice(0, 22) + '…';
+    $('#logLines').appendChild(l);
+  };
+
+  /* trace 1: parts */
+  $('#t1meta').textContent = D.spec.name.toLowerCase();
+  $('#t1rows').innerHTML = D.spec.parts.map(p => {
+    const m = D.spec.materials[p.material];
+    return '<tr><td class="id">' + p.id + '</td><td>' + p.shape + '</td>' +
+      '<td class="num">' + fmtSize(p.size) + '</td>' +
+      '<td><span class="sw" style="background:' + m.color + '"></span>' + p.material + '</td>' +
+      '<td class="num">' + massOf(p.id).toFixed(0) + 'g</td></tr>';
+  }).join('');
+
+  /* trace 2: checks + joints */
+  $('#t2meta').textContent = D.report.timingMs + 'ms';
+  $('#t2checks').innerHTML = D.report.checks.map(c =>
+    '<div class="chkrow" title="' + c.detail.replace(/"/g,'&quot;') + '">' +
+    '<span class="tick">' + (c.status==='pass' ? '✓' : '✗') + '</span>' +
+    '<span class="n">' + c.name + '</span><span class="m">' + (c.measured ? c.measured.toFixed(1) : 'ok') + '</span></div>').join('');
+  $('#t2joints').innerHTML = D.spec.joints.map(j =>
+    '<div class="jrow"><span class="ty">' + j.type + '</span> ' + j.a + '~' + j.b + ' @(' + j.anchor.join(',') + ')</div>').join('');
+
+  /* notepad */
+  $('#logLines').innerHTML = D.log.map(l => '<div>' + l + '</div>').join('');
+
+  /* ledge steps */
+  let i = 0;
+  $('#ledgeSteps').innerHTML = D.plan.map(s => {
+    const r = ((i++) % 2 ? 1 : -1) * (1 + (i % 3));
+    if (s.kind === 'place') return '<div class="stepcard" style="--r:' + r + 'deg" title="seat (' + s.seat.join(',') + ') · ' + s.massG.toFixed(0) + 'g">' +
+      '<span class="armchip ' + s.arm + '">' + s.arm + '</span>' +
+      '<div class="sn">STEP ' + s.step + ' ' + s.glyph + '</div><div class="sp">' + s.part + '</div>' +
+      '<div class="sm">' + s.massG.toFixed(0) + 'g</div></div>';
+    return '<div class="stepcard jc" style="--r:' + r + 'deg" title="axis (' + s.axis.join(',') + ') @(' + s.anchor.join(',') + ')">' +
+      '<div class="sn">JOINT</div><div class="sp">' + s.type.slice(0,3) + ' ' + s.a + '~' + s.b + '</div></div>';
+  }).join('');
+  $('#ledgeStatus').innerHTML =
+    '<b>' + (D.report.pass ? '● VERIFIED' : '● FAILED') + '</b><br>' +
+    'tip-margin ' + (stab ? stab.measured.toFixed(1) : '—') + 'mm<br>' +
+    'clearance ' + (clr ? clr.measured.toFixed(1) : '—') + 'mm';
+})();
+</script>
+</body>
+</html>

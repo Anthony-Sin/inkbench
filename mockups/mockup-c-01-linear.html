@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1700">
+<title>INKBENCH · FIG-1 Desk lamp</title>
+<style>
+:root{
+  --bg:#0e0f13; --panel:#12131a; --panel2:#171923; --hover:#1d1f2a;
+  --line:#22242f; --line2:#2c2e3c;
+  --txt:#e8e9ee; --mut:#878d9d; --dim:#565b6b;
+  --acc:#5e6ad2; --acc-soft:rgba(94,106,210,.14);
+  --ok:#4cb782; --ok-soft:rgba(76,183,130,.13);
+  --pink:#b86ad2; --amber:#e8b34c;
+  --r:8px; --r2:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--txt);overflow:hidden;display:flex;flex-direction:column;
+  font:13px/1.5 "Inter","SF Pro Text",-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit;color:inherit}
+::selection{background:var(--acc-soft)}
+.scr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- top bar ---------- */
+#top{
+  height:44px;flex:0 0 44px;display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:var(--panel);border-bottom:1px solid var(--line);
+}
+.mark{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,var(--acc),#8f7ce8);
+  display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:-.02em}
+.crumbs{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--mut)}
+.crumbs b{color:var(--txt);font-weight:550}
+.crumbs .sep{color:var(--dim)}
+.figtag{font:600 11px/1 "SF Mono",ui-monospace,Menlo,Consolas,monospace;color:var(--dim);
+  border:1px solid var(--line2);border-radius:4px;padding:2px 5px}
+.spacer{flex:1}
+.cmdk{
+  display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border:1px solid var(--line2);
+  border-radius:6px;color:var(--mut);font-size:12px;background:var(--panel2);transition:border-color .15s,color .15s;
+}
+.cmdk:hover,.cmdk:focus-visible{border-color:var(--acc);color:var(--txt);outline:none}
+kbd{font:600 10.5px/1 "SF Mono",ui-monospace,Menlo,Consolas,monospace;color:var(--mut);
+  border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;padding:2px 4px;background:var(--panel)}
+.status-pill{display:flex;align-items:center;gap:7px;height:26px;padding:0 11px;border-radius:99px;
+  background:var(--ok-soft);color:var(--ok);font-size:12px;font-weight:560}
+.status-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+
+/* ---------- layout ---------- */
+#main{flex:1;display:flex;min-height:0}
+
+/* left rail */
+#rail{width:236px;flex:0 0 236px;background:var(--panel);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;overflow-y:auto;padding:14px 8px}
+.rail-h{font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;padding:0 10px;margin:14px 0 6px}
+.rail-h:first-child{margin-top:0}
+.rail-i{display:flex;align-items:center;gap:9px;height:30px;padding:0 10px;border-radius:6px;color:var(--mut);
+  cursor:pointer;user-select:none;transition:background .12s,color .12s}
+.rail-i:hover{background:var(--hover);color:var(--txt)}
+.rail-i:focus-visible{outline:1.5px solid var(--acc);outline-offset:-1.5px}
+.rail-i.on{background:var(--acc-soft);color:var(--txt)}
+.rail-i .ic{width:16px;text-align:center;font-size:13px;flex:0 0 16px;color:var(--dim)}
+.rail-i.on .ic{color:var(--acc)}
+.rail-i .lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnt{font:600 10.5px/1.6 "SF Mono",ui-monospace,Menlo,monospace;color:var(--dim);background:var(--panel2);
+  border-radius:4px;padding:0 6px;min-width:20px;text-align:center}
+.okmark{color:var(--ok);font-size:11px}
+.divider{height:1px;background:var(--line);margin:12px 4px}
+.sw{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:2px;flex:0 0 9px}
+
+/* canvas */
+#canvas{flex:1;position:relative;overflow:hidden;
+  background:var(--bg) radial-gradient(#1b1d27 1px,transparent 1.1px);background-size:22px 22px}
+#composer{position:absolute;top:26px;left:50%;transform:translateX(-50%);width:620px;z-index:5;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:12px 14px;
+  box-shadow:0 12px 40px rgba(0,0,0,.45)}
+#composer .lbl{font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+#composer .row{display:flex;gap:8px}
+#brief{flex:1;height:34px;background:var(--bg);border:1px solid var(--line2);border-radius:7px;
+  padding:0 11px;font-size:13px;transition:border-color .15s,box-shadow .15s}
+#brief::placeholder{color:var(--dim)}
+#brief:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+#go{height:34px;padding:0 14px;border-radius:7px;background:var(--acc);color:#fff;font-weight:560;
+  transition:filter .15s,opacity .15s}
+#go:hover{filter:brightness(1.12)}
+#go:active{transform:translateY(1px)}
+#go:disabled{opacity:.45;cursor:not-allowed}
+#figure{position:absolute;inset:0;display:grid;place-items:center}
+.fig-card{background:var(--panel2);border:1px solid var(--line2);border-radius:14px;padding:14px 14px 10px;
+  box-shadow:0 24px 70px rgba(0,0,0,.5);transition:border-color .2s}
+.fig-card:hover{border-color:#3a3d52}
+.fig-card img{display:block;height:578px;width:auto;border-radius:8px;background:#0a0b0f}
+.fig-cap{display:flex;align-items:center;gap:9px;padding-top:10px;color:var(--mut);font-size:12px}
+.fig-cap .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font:600 10.5px/1.8 "SF Mono",ui-monospace,Menlo,monospace;border-radius:4px;padding:0 7px}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.dim{background:var(--panel);color:var(--mut);border:1px solid var(--line)}
+.chip.acc{background:var(--acc-soft);color:#9aa3f0}
+.chip.pink{background:rgba(184,106,210,.13);color:var(--pink)}
+#floatlog{position:absolute;right:22px;bottom:22px;width:330px;z-index:5;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;
+  font:11.5px/1.7 "SF Mono",ui-monospace,Menlo,Consolas,monospace;color:var(--mut);max-height:150px;overflow-y:auto}
+#floatlog .h{font:600 10px/1 "Inter",sans-serif;color:var(--dim);text-transform:uppercase;letter-spacing:.09em;margin-bottom:5px;
+  font-family:"Inter",sans-serif}
+#floatlog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#floatlog .ok{color:var(--ok)}
+
+/* inspector */
+#insp{width:300px;flex:0 0 300px;background:var(--panel);border-left:1px solid var(--line);
+  overflow-y:auto;padding:16px 16px 24px}
+.insp-title{font-size:15px;font-weight:600;margin-bottom:2px}
+.insp-sub{color:var(--mut);font-size:12px;margin-bottom:14px}
+.sec-h{font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;
+  margin:18px 0 7px;display:flex;align-items:center;gap:6px}
+.prop{display:flex;align-items:center;min-height:28px;font-size:12.5px}
+.prop .k{width:96px;color:var(--mut);flex:0 0 96px}
+.prop .v{flex:1;color:var(--txt)}
+.prop .v.mono{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:11.5px}
+.check{display:flex;gap:9px;padding:7px 8px;border-radius:7px;transition:background .12s;cursor:default}
+.check:hover{background:var(--hover)}
+.check .ci{width:16px;height:16px;flex:0 0 16px;margin-top:1px;border-radius:50%;
+  display:grid;place-items:center;font-size:10px;background:var(--ok-soft);color:var(--ok)}
+.check .nm{font-size:12.5px;font-weight:530}
+.check .dt{font-size:11px;color:var(--mut);margin-top:1px;line-height:1.45}
+.check .ms{font:10.5px "SF Mono",ui-monospace,Menlo,monospace;color:var(--dim)}
+.op{display:flex;align-items:center;gap:9px;min-height:30px;padding:4px 8px;border-radius:7px;font-size:12.5px;
+  transition:background .12s}
+.op:hover{background:var(--hover)}
+.op .n{font:600 10.5px "SF Mono",ui-monospace,Menlo,monospace;color:var(--dim);width:20px;flex:0 0 20px}
+.op .p{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op .p small{color:var(--dim);font-size:11px}
+.arm{font:700 10px/1.7 "SF Mono",ui-monospace,Menlo,monospace;border-radius:4px;padding:0 6px}
+.arm.a{background:var(--acc-soft);color:#9aa3f0}
+.arm.b{background:rgba(184,106,210,.13);color:var(--pink)}
+.arm.ab{background:rgba(232,179,76,.13);color:var(--amber)}
+.jt{font:500 10.5px "SF Mono",ui-monospace,Menlo,monospace;color:var(--dim);border:1px dashed var(--line2);
+  border-radius:4px;padding:1px 6px}
+.matrow{display:flex;align-items:center;gap:9px;min-height:26px;font-size:12.5px}
+.matrow .n{flex:1}
+.matrow .d{font:11px "SF Mono",ui-monospace,Menlo,monospace;color:var(--dim)}
+
+/* hint bar */
+#hints{height:30px;flex:0 0 30px;display:flex;align-items:center;gap:18px;padding:0 14px;
+  background:var(--panel);border-top:1px solid var(--line);color:var(--dim);font-size:11.5px}
+#hints .h{display:flex;align-items:center;gap:6px}
+#hints .r{margin-left:auto;display:flex;gap:14px}
+#hints .hov{color:var(--mut)}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <div class="mark">IK</div>
+  <div class="crumbs">
+    <span>Inkbench</span><span class="sep">›</span>
+    <span>Figures</span><span class="sep">›</span>
+    <span class="figtag" id="crumb-fig"></span>
+    <b id="crumb-name"></b>
+  </div>
+  <div class="spacer"></div>
+  <button class="cmdk" id="cmdk" title="Open command menu">
+    <span>Search or command</span><kbd>⌘K</kbd>
+  </button>
+  <div class="status-pill" id="status-pill"></div>
+</div>
+
+<div id="main">
+  <nav id="rail" aria-label="Workspace navigation"></nav>
+
+  <section id="canvas" aria-label="Figure canvas">
+    <div id="composer">
+      <div class="lbl">New brief</div>
+      <div class="row">
+        <input id="brief" type="text" spellcheck="false"
+          placeholder="Describe a mechanism to design, verify and build…">
+        <button id="go">Submit<kbd style="margin-left:8px;border-color:rgba(255,255,255,.25);background:none;color:#fff">↵</kbd></button>
+      </div>
+    </div>
+    <div id="figure"></div>
+    <div id="floatlog"><div class="h">Agent log</div><div id="loglines"></div></div>
+  </section>
+
+  <aside id="insp" aria-label="Inspector"></aside>
+</div>
+
+<div id="hints">
+  <span class="h"><kbd>⌘K</kbd> command menu</span>
+  <span class="h"><kbd>G</kbd><kbd>F</kbd> go to figures</span>
+  <span class="h"><kbd>C</kbd> compose brief</span>
+  <span class="h"><kbd>Tab</kbd> cycle panels</span>
+  <div class="r">
+    <span id="hint-status"></span>
+    <span class="hov">rendered by inkbench · toon pipeline</span>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const D = window.DATA;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mono = v => '('+v.map(n=>(+n).toFixed(1)).join(', ')+')';
+const sizeOf = p => Array.isArray(p.size) ? p.size.join('×')+' mm' : 'r'+p.size.r+' · h'+p.size.h+' mm';
+const mass = g => g>=1000 ? (g/1000).toFixed(2)+' kg' : Math.round(g)+' g';
+const matCol = m => (D.spec.materials[m]||{}).color||'#888';
+const checks = D.report.checks;
+const passed = checks.filter(c=>c.status==='pass').length;
+const fig = D.figures[0];
+
+/* ----- top ----- */
+$('#crumb-fig').textContent = 'FIG-'+fig.figNum;
+$('#crumb-name').textContent = fig.name;
+$('#status-pill').innerHTML = '<span class="dot"></span>'+(D.report.pass?'Verified':'Failed');
+$('#hint-status').textContent = fig.parts+' parts · '+fig.joints+' joints · '+passed+'/'+checks.length+' checks · '+D.report.timingMs.toFixed(0)+'ms';
+
+/* ----- rail ----- */
+const rail = $('#rail');
+rail.innerHTML = `
+  <div class="rail-h">Workspace</div>
+  <div class="rail-i" tabindex="0"><span class="ic">◧</span><span class="lbl">Inbox</span><span class="cnt">0</span></div>
+  <div class="rail-i" tabindex="0"><span class="ic">◔</span><span class="lbl">Queue</span><span class="cnt">${D.attempts}</span></div>
+  <div class="rail-h">Figures</div>
+  ${D.figures.map(f=>`
+    <div class="rail-i on" tabindex="0"><span class="ic">▣</span>
+      <span class="lbl">FIG-${f.figNum} ${esc(f.name)}</span>
+      <span class="okmark">${f.pass?'✓':'✗'}</span></div>`).join('')}
+  <div class="rail-h">This figure</div>
+  <div class="rail-i" tabindex="0"><span class="ic">⬡</span><span class="lbl">Spec</span><span class="cnt">${D.spec.parts.length}</span></div>
+  <div class="rail-i" tabindex="0"><span class="ic">⌘</span><span class="lbl">Joints</span><span class="cnt">${D.spec.joints.length}</span></div>
+  <div class="rail-i" tabindex="0"><span class="ic">✓</span><span class="lbl">Verification</span><span class="cnt">${passed}/${checks.length}</span></div>
+  <div class="rail-i" tabindex="0"><span class="ic">⚒</span><span class="lbl">Build plan</span><span class="cnt">${D.plan.length}</span></div>
+  <div class="divider"></div>
+  <div class="rail-h">Materials</div>
+  ${Object.entries(D.spec.materials).map(([n,m])=>`
+    <div class="rail-i" tabindex="0"><span class="ic"><span class="sw" style="background:${m.color}"></span></span>
+      <span class="lbl" style="text-transform:capitalize">${n}</span>
+      <span class="cnt">${m.density}</span></div>`).join('')}
+`;
+
+/* ----- canvas ----- */
+$('#figure').innerHTML = `
+  <div class="fig-card">
+    <img src="lamp_flat.png" alt="Assembled toon render of ${esc(fig.name)}">
+    <div class="fig-cap">
+      <span class="figtag">FIG-${fig.figNum}</span>
+      <span class="t">${esc(fig.name)} — assembled view</span>
+      <span class="chip ${D.report.pass?'ok':'dim'}">${D.report.pass?'PASS':'FAIL'}</span>
+      <span class="chip acc">${D.report.timingMs.toFixed(0)}ms</span>
+      <span class="chip dim">${D.spec.units}</span>
+    </div>
+  </div>`;
+
+/* ----- inspector ----- */
+const insp = $('#insp');
+insp.innerHTML = `
+  <div class="insp-title">${esc(D.spec.name)}</div>
+  <div class="insp-sub">${esc(D.brief)}</div>
+  <div class="sec-h">Properties</div>
+  <div class="prop"><span class="k">Status</span><span class="v"><span class="chip ${D.report.pass?'ok':''}">${D.report.pass?'Verified':'Failed'}</span></span></div>
+  <div class="prop"><span class="k">Attempts</span><span class="v mono">${D.attempts}</span></div>
+  <div class="prop"><span class="k">Units</span><span class="v mono">${D.spec.units}</span></div>
+  <div class="prop"><span class="k">Evaluated</span><span class="v mono">${D.report.timingMs.toFixed(1)} ms</span></div>
+  <div class="prop"><span class="k">Total mass</span><span class="v mono">${mass(D.measures.reduce((s,m)=>s+m.massG,0))}</span></div>
+  <div class="sec-h">Verification <span class="cnt">${passed}/${checks.length}</span></div>
+  ${checks.map(c=>`
+    <div class="check">
+      <span class="ci">${c.status==='pass'?'✓':'✗'}</span>
+      <div><div class="nm">${esc(c.name)} ${c.measured?`<span class="ms">${(+c.measured).toFixed(2)}</span>`:''}</div>
+      <div class="dt">${esc(c.detail).slice(0,110)}${c.detail.length>110?'…':''}</div></div>
+    </div>`).join('')}
+  <div class="sec-h">Build plan <span class="cnt">${D.plan.length} ops</span></div>
+  ${D.plan.map(op=> op.kind==='place' ? `
+    <div class="op"><span class="n">${String(op.step).padStart(2,'0')}</span>
+      <span class="p">${esc(op.part)} ${op.glyph} <small>${mass(op.massG)}</small></span>
+      <span class="arm ${op.arm.toLowerCase().replace('+','b')}">ARM ${op.arm}</span></div>`
+    : `
+    <div class="op"><span class="n">◇</span>
+      <span class="p"><small>${esc(op.a)} ↔ ${esc(op.b)}</small></span>
+      <span class="jt">${esc(op.type)}</span></div>`).join('')}
+  <div class="sec-h">Insert axis</div>
+  <div class="prop"><span class="k">All parts</span><span class="v mono">${mono(D.spec.assembly[0].insert_from)} +z</span></div>
+`;
+
+/* ----- log ----- */
+const logEl = $('#loglines');
+D.log.forEach(l=>{
+  const d=document.createElement('div');
+  if(/pass|✓|verified/i.test(l)) d.className='ok';
+  d.textContent=l; logEl.appendChild(d);
+});
+
+/* ----- brief submit ----- */
+const brief=$('#brief'), go=$('#go');
+brief.value=D.brief;
+function submit(){
+  const v=brief.value.trim(); if(!v) return;
+  go.disabled=true; go.textContent='Queued';
+  const d=document.createElement('div'); d.textContent='brief ▸ '+v; logEl.appendChild(d);
+  const d2=document.createElement('div'); d2.textContent='designing…'; logEl.appendChild(d2);
+  logEl.scrollTop=logEl.scrollHeight;
+  setTimeout(()=>{go.disabled=false;go.innerHTML='Submit<kbd style="margin-left:8px;border-color:rgba(255,255,255,.25);background:none;color:#fff">↵</kbd>'},900);
+}
+go.addEventListener('click',submit);
+brief.addEventListener('keydown',e=>{if(e.key==='Enter')submit()});
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#cmdk').focus()}
+  else if(e.key.toLowerCase()==='c'&&document.activeElement!==brief){brief.focus()}
+});
+</script>
+</body>
+</html>

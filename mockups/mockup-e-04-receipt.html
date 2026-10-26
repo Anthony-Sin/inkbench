@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — TICKET</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{
+    background:#26221d radial-gradient(ellipse at 50% 0%,#3a332a 0%,#26221d 70%);
+    font-family:"Courier New",Courier,monospace;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  /* ===== printer head ===== */
+  #printer{
+    width:520px;flex:0 0 auto;background:linear-gradient(#3d3d3d,#1a1a1a);
+    border:1px solid #000;border-top:none;border-radius:0 0 10px 10px;
+    padding:10px 0 14px;display:flex;align-items:center;justify-content:center;gap:14px;
+    box-shadow:0 6px 18px rgba(0,0,0,.6);position:relative;z-index:5;
+  }
+  #printer .slot{width:340px;height:8px;background:#000;border-radius:4px;box-shadow:inset 0 2px 4px #000}
+  #printer .led{width:9px;height:9px;border-radius:50%;background:#39ff5a;box-shadow:0 0 8px #39ff5a}
+  #feed{
+    background:#2c2c2c;color:#ddd;border:1px solid #555;border-radius:4px;
+    font-family:inherit;font-size:10px;padding:5px 10px;cursor:pointer;letter-spacing:1px;
+  }
+  #feed:hover{background:#444}#feed:active{background:#111}
+  /* ===== receipt ===== */
+  #receiptScroll{flex:1;min-height:0;overflow-y:auto;width:100%;display:flex;justify-content:center;padding:0 0 30px}
+  #receipt{
+    width:400px;flex:0 0 auto;height:fit-content;
+    background:#f5f1e3;color:#1c1a16;font-size:12px;line-height:1.45;
+    padding:16px 20px 30px;box-shadow:0 4px 20px rgba(0,0,0,.5);
+    filter:sepia(.12);
+  }
+  /* torn edges */
+  #receipt::before{
+    content:"";display:block;height:10px;margin:-16px -20px 10px;
+    background:linear-gradient(-45deg,transparent 8px,#f5f1e3 0) 0 0/16px 16px repeat-x,
+               linear-gradient(45deg,transparent 8px,#f5f1e3 0) 8px 0/16px 16px repeat-x;
+  }
+  #receipt::after{
+    content:"";display:block;height:10px;margin:24px -20px -30px;
+    background:linear-gradient(45deg,transparent 8px,#f5f1e3 0) 0 0/16px 16px repeat-x,
+               linear-gradient(-45deg,transparent 8px,#f5f1e3 0) 8px 0/16px 16px repeat-x;
+    transform:scaleY(-1);
+  }
+  .c{text-align:center}
+  .b{font-weight:bold}
+  .big{font-size:17px;font-weight:bold;letter-spacing:2px}
+  .cut{overflow:hidden;white-space:nowrap;color:#555;letter-spacing:0}
+  .row{display:flex;justify-content:space-between;gap:8px}
+  .row .l{white-space:pre-wrap}
+  .ind{padding-left:14px;color:#444;font-size:11px}
+  .stamp{
+    border:3px double #b03030;color:#b03030;transform:rotate(-7deg);
+    display:inline-block;padding:4px 14px;font-weight:bold;font-size:16px;letter-spacing:3px;margin:8px 0;
+    mask-image:none;opacity:.85;
+  }
+  #barcode{height:44px;margin:8px 24px 2px;display:flex;align-items:flex-end}
+  #barcode i{background:#1c1a16;display:block}
+  .tiny{font-size:10px;color:#666}
+  button.rbtn{
+    width:100%;background:none;border:2px dashed #1c1a16;font-family:inherit;
+    font-size:12px;padding:6px;cursor:pointer;font-weight:bold;letter-spacing:2px;margin-top:4px;
+  }
+  button.rbtn:hover{background:#1c1a16;color:#f5f1e3}
+  textarea{
+    width:100%;background:none;border:none;border-bottom:1px solid #999;font-family:inherit;
+    font-size:11px;resize:none;height:34px;color:inherit;padding:2px;
+  }
+  textarea:focus{outline:1px dashed #888}
+  img.photo{display:block;margin:6px auto;border:1px solid #999;max-width:72%;filter:contrast(1.05) grayscale(.15)}
+  ::-webkit-scrollbar{width:10px}
+  ::-webkit-scrollbar-thumb{background:#555}
+</style>
+</head>
+<body>
+<div id="printer">
+  <div class="led"></div>
+  <div class="slot"></div>
+  <button id="feed">FEED ▸</button>
+</div>
+<div id="receiptScroll">
+  <div id="receipt"></div>
+</div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA,$=s=>document.querySelector(s);
+const mass=id=>{const m=D.measures.find(m=>m.id===id);return m?m.massG:0};
+const TOT=D.measures.reduce((s,m)=>s+m.massG,0);
+const f=a=>a.map(x=>(+x).toFixed(1).replace(/\.0$/,'')).join(',');
+const cut=n=>'- '.repeat(n).trim().slice(0,44);
+const eq='='.repeat(44), dt='- '.repeat(22);
+const R=$('#receipt');
+const row=(l,r)=>'<div class="row"><span class="l">'+l+'</span><span>'+r+'</span></div>';
+const sizeStr=p=>{if(Array.isArray(p.size))return p.size.join('x');
+  return p.size&&p.size.r!==undefined?'r'+p.size.r+' h'+p.size.h:'?'};
+
+let h='';
+h+='<div class="c big">INKBENCH</div>';
+h+='<div class="c">AGENTIC CAD WORKBENCH</div>';
+h+='<div class="c tiny">1700 X 900 WORKSTATION · NODE 07</div>';
+h+='<div class="c tiny">OPERATOR: AGENT &nbsp; REG: IB-01</div>';
+h+='<div class="c" style="margin:6px 0">'+eq+'</div>';
+h+='<div class="b">CUSTOMER BRIEF:</div>';
+h+='<textarea id="brief"></textarea>';
+h+='<button class="rbtn" id="submit">** RUN PIPELINE **</button>';
+h+='<div class="c" style="margin:6px 0">'+dt+'</div>';
+
+/* itemized parts */
+h+='<div class="b">PARTS MANIFEST</div>';
+D.spec.parts.forEach((p,i)=>{
+  h+=row((i+1)+' '+p.id.toUpperCase().replace(/_/g,' '), mass(p.id).toFixed(1)+'g');
+  h+='<div class="ind">'+p.shape+' / '+p.material+' / '+sizeStr(p)+' '+D.spec.units+'</div>';
+});
+h+=row('','' );
+h+=row('SUBTOTAL ('+D.spec.parts.length+' PCS)', (TOT/1000).toFixed(3)+'kg');
+h+=row('JOINTS @'+D.spec.joints.length, D.spec.joints.map(j=>j.type[0].toUpperCase()).join(''));
+h+=row('TAX (VERIFY '+D.report.timingMs+'ms)','0.00');
+h+='<div class="row b" style="font-size:15px"><span>TOTAL MASS</span><span>'+(TOT/1000).toFixed(3)+'kg</span></div>';
+h+='<div class="c" style="margin:6px 0">'+dt+'</div>';
+
+/* checks */
+h+='<div class="b c">*** QUALITY INSPECTION ***</div>';
+D.report.checks.forEach(k=>{
+  const ok=k.status==='pass';
+  h+=row(k.name.toUpperCase(), ok?'[PASS]':'[**FAIL**]');
+});
+h+=row('FAILURES', (D.report.failures||[]).length);
+h+='<div class="c"><span class="stamp">'+(D.report.pass?'PASS':'VOID')+'</span></div>';
+h+='<div class="c" style="margin:6px 0">'+dt+'</div>';
+
+/* render photo */
+h+='<div class="b c">RENDER PROOF #'+ (D.figures[0].figNum||1) +'</div>';
+h+='<img class="photo" src="lamp_flat.png">';
+h+='<div class="c tiny">"'+D.figures[0].name+'" — '+(D.report.explodedOrder||[]).join('·')+'</div>';
+h+='<div class="c" style="margin:6px 0">'+dt+'</div>';
+
+/* pick list */
+h+='<div class="b c">*** ARM PICK LIST ***</div>';
+D.plan.forEach(s=>{
+  if(s.kind==='place'){
+    h+=row('STEP '+String(s.step).padStart(2,'0')+' '+s.part.toUpperCase().replace(/_/g,' '), 'ARM '+s.arm);
+    h+='<div class="ind">'+s.glyph+' seat ['+f(s.seat)+'] '+s.massG.toFixed(0)+'g</div>';
+  }else{
+    h+='<div class="ind" style="padding-left:26px">+ '+s.type+' jt: '+s.a+'~'+s.b+'</div>';
+  }
+});
+h+='<div class="c" style="margin:6px 0">'+dt+'</div>';
+
+/* log */
+h+='<div class="b">SESSION LOG:</div>';
+D.log.forEach(x=>{h+='<div class="ind" style="padding-left:4px">'+x+'</div>'});
+h+='<div class="c" style="margin:8px 0">'+eq+'</div>';
+h+='<div class="c b">STATUS: '+(D.report.pass?'COMPLETE':'HELD')+' — ATTEMPT '+D.attempts+'</div>';
+h+='<div id="barcode"></div>';
+h+='<div class="c tiny">**IB-' + String(D.attempts).padStart(4,'0') + '-' + Math.round(D.report.timingMs*10) + '**</div>';
+h+='<div class="c" style="margin-top:4px">THANK YOU — COME AGAIN</div>';
+h+='<div class="c tiny">NO REFUNDS ON VERIFIED GEOMETRY</div>';
+R.innerHTML=h;
+$('#brief').value='"'+D.brief+'"';
+$('#submit').onclick=()=>{const d=document.createElement('div');d.className='c tiny';d.textContent='-- RE-QUEUED '+new Date().toLocaleTimeString()+' --';$('#submit').after(d)};
+
+/* fake barcode, deterministic from data */
+const bc=$('#barcode');let seed=Math.round(TOT)+D.spec.joints.length*7;
+const rnd=()=>{seed=(seed*1103515245+12345)%2147483648;return seed/2147483648};
+for(let i=0;i<48;i++){const b=document.createElement('i');
+  b.style.width=(1+Math.floor(rnd()*4))+'px';b.style.height=(30+rnd()*14)+'px';
+  b.style.marginRight=(1+Math.floor(rnd()*3))+'px';bc.appendChild(b)}
+
+$('#feed').onclick=()=>{const s=$('#receiptScroll');s.scrollTop=0};
+</script>
+</body>
+</html>

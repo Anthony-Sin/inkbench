@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Blueprint Sheet</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#06192e}
+  body{font-family:"Cascadia Mono","JetBrains Mono",ui-monospace,"Courier New",monospace;color:#eaf4ff}
+  #stage{position:absolute;left:50%;top:50%;width:1700px;height:900px;transform:translate(-50%,-50%);transform-origin:center;
+    background:#0d3b66;
+    background-image:
+      linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px),
+      linear-gradient(rgba(255,255,255,.11) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.11) 1px,transparent 1px);
+    background-size:20px 20px,20px 20px,100px 100px,100px 100px;}
+  .sheet{position:absolute;inset:24px;border:2px solid #dceafa;outline:1px solid rgba(220,234,250,.5);outline-offset:5px}
+  /* ---- drawing field ---- */
+  .field{position:absolute;left:24px;top:24px;bottom:24px;width:1090px;border-right:1px solid rgba(220,234,250,.55)}
+  .secLabel{position:absolute;top:14px;left:18px;font-size:15px;letter-spacing:4px}
+  .secLabel b{font-weight:400;border:1.5px solid #eaf4ff;padding:2px 10px;border-radius:20px}
+  .figTag{position:absolute;top:52px;left:18px;font-size:11px;letter-spacing:2px;opacity:.75}
+  .view{position:absolute;left:150px;top:60px;width:460px;height:780px;overflow:hidden}
+  .view img{width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.35) brightness(1.15);mix-blend-mode:screen}
+  .view::after{content:"";position:absolute;inset:0;border:1px solid rgba(220,234,250,.4)}
+  /* part callouts : left side */
+  .callout{position:absolute;left:0;width:150px;font-size:11px;line-height:1.5;letter-spacing:.5px}
+  .callout .num{display:inline-block;width:22px;height:22px;line-height:20px;text-align:center;border:1.5px solid #eaf4ff;border-radius:50%;margin-right:6px;font-size:12px}
+  .callout .nm{border-bottom:1px solid #eaf4ff;display:block;padding-bottom:3px;margin-bottom:3px;text-transform:uppercase;letter-spacing:1.5px}
+  .callout .leader{position:absolute;left:150px;top:11px;width:70px;height:1px;background:#eaf4ff}
+  .callout .leader::after{content:"";position:absolute;right:0;top:-3px;width:7px;height:7px;border:1.5px solid #eaf4ff;border-radius:50%}
+  /* dimension rail : right side */
+  .dimRail{position:absolute;left:690px;top:60px;width:120px;height:780px}
+  .dimRail .axis{position:absolute;left:14px;top:0;bottom:0;width:1px;background:#eaf4ff}
+  .dimRail .axis::before,.dimRail .axis::after{content:"";position:absolute;left:-5px;width:11px;height:11px;border:1.5px solid #eaf4ff}
+  .dimRail .axis::before{top:0;border-bottom:0;border-right:0;transform:rotate(45deg);transform-origin:bottom left}
+  .tick{position:absolute;left:8px;width:13px;height:1px;background:#eaf4ff}
+  .tickLbl{position:absolute;left:28px;font-size:10px;letter-spacing:.5px;transform:translateY(-50%);white-space:nowrap;opacity:.9}
+  .matLegend{position:absolute;left:860px;top:60px;font-size:11px;letter-spacing:1px}
+  .matLegend .h{letter-spacing:3px;border-bottom:1px solid #eaf4ff;padding-bottom:5px;margin-bottom:8px;font-size:12px}
+  .matLegend .sw{display:inline-block;width:12px;height:12px;border:1px solid #eaf4ff;margin-right:8px;vertical-align:-1px}
+  .matLegend div{margin-bottom:7px}
+  .cutNote{position:absolute;left:860px;top:300px;font-size:10px;letter-spacing:1.5px;opacity:.8;max-width:200px;line-height:1.7}
+  /* ---- right document column ---- */
+  .doc{position:absolute;right:24px;top:24px;bottom:24px;width:508px;display:flex;flex-direction:column}
+  .cell{border:1px solid #dceafa;padding:10px 12px;position:relative}
+  .cell .cap{position:absolute;top:-1px;right:-1px;background:#dceafa;color:#0d3b66;font-size:9px;letter-spacing:2px;padding:3px 8px}
+  .cell h3{font-size:11px;letter-spacing:3px;font-weight:600;margin-bottom:8px}
+  .brief{font-size:12px;line-height:1.6;font-style:italic;opacity:.95}
+  .btn{display:inline-block;margin-top:8px;border:1.5px solid #eaf4ff;background:transparent;color:#eaf4ff;font:inherit;font-size:11px;letter-spacing:2px;padding:6px 14px;cursor:pointer;transition:.15s}
+  .btn:hover{background:#eaf4ff;color:#0d3b66}
+  table.spec{width:100%;border-collapse:collapse;font-size:10.5px}
+  table.spec td,table.spec th{border:1px solid rgba(220,234,250,.5);padding:3px 6px;text-align:left}
+  table.spec th{font-size:9px;letter-spacing:2px;font-weight:600;opacity:.8}
+  .chk{display:flex;gap:8px;font-size:10.5px;padding:3px 0;border-bottom:1px dashed rgba(220,234,250,.3);align-items:baseline}
+  .chk:last-child{border-bottom:0}
+  .chk .st{width:16px;height:16px;border:1.5px solid #eaf4ff;border-radius:50%;line-height:14px;text-align:center;font-size:10px;flex:none}
+  .chk .nm{letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+  .chk .dt{opacity:.7;font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .seq{display:flex;flex-direction:column;gap:3px;font-size:10.5px}
+  .seq .p{display:flex;gap:8px;align-items:baseline}
+  .seq .sn{width:20px;height:20px;border:1.5px solid #eaf4ff;border-radius:50%;line-height:18px;text-align:center;font-size:10px;flex:none}
+  .seq .arm{margin-left:auto;letter-spacing:1px;border:1px solid rgba(220,234,250,.6);padding:0 5px;font-size:9.5px}
+  .seq .j{font-size:9.5px;opacity:.7;padding-left:28px;letter-spacing:.5px}
+  .logcell{flex:1;min-height:0;display:flex;flex-direction:column}
+  .log{flex:1;overflow-y:auto;font-size:10px;line-height:1.75;opacity:.9;scrollbar-width:thin;scrollbar-color:#dceafa transparent}
+  .log::-webkit-scrollbar{width:5px}.log::-webkit-scrollbar-thumb{background:#dceafa}
+  /* title block */
+  .tblock{display:grid;grid-template-columns:1fr 1fr 1fr;border:2px solid #dceafa;margin-top:10px}
+  .tblock>div{border:1px solid rgba(220,234,250,.55);padding:7px 10px;font-size:10px;letter-spacing:1px}
+  .tblock .k{font-size:8px;letter-spacing:2px;opacity:.7;display:block;margin-bottom:3px}
+  .tblock .big{grid-column:span 1;font-size:14px;letter-spacing:2px;font-weight:600}
+  .stamp{position:absolute;right:16px;bottom:190px;transform:rotate(-8deg);border:3px double #dceafa;color:#dceafa;font-size:20px;letter-spacing:6px;padding:10px 22px;opacity:.85;font-weight:600}
+</style>
+</head>
+<body>
+<div id="stage"><div class="sheet">
+  <div class="field">
+    <div class="secLabel">SECTION <b>A—A</b></div>
+    <div class="figTag" id="figTag"></div>
+    <div class="view"><img src="lamp_exploded.png" alt="exploded view"></div>
+    <div id="callouts"></div>
+    <div class="dimRail" id="dimRail"><div class="axis"></div></div>
+    <div class="matLegend"><div class="h">MATERIALS</div><div id="mats"></div></div>
+    <div class="cutNote" id="cutNote"></div>
+  </div>
+  <div class="doc">
+    <div class="cell"><span class="cap">PROJECT</span>
+      <h3>BRIEF — DESIGN INTENT</h3>
+      <div class="brief" id="brief"></div>
+      <button class="btn" id="rerun">↻ RE-ISSUE TO AGENT</button>
+    </div>
+    <div class="cell" style="margin-top:10px"><span class="cap">TABLE 1</span>
+      <h3>PART LIST</h3>
+      <table class="spec" id="specTable"></table>
+    </div>
+    <div class="cell" style="margin-top:10px"><span class="cap">TABLE 2</span>
+      <h3>INSPECTION</h3>
+      <div id="checks"></div>
+    </div>
+    <div class="cell" style="margin-top:10px"><span class="cap">TABLE 3</span>
+      <h3>ERECTING SEQUENCE — ARMS A/B</h3>
+      <div class="seq" id="seq"></div>
+    </div>
+    <div class="cell logcell" style="margin-top:10px"><span class="cap">PLOT</span>
+      <h3>MACHINE LOG</h3>
+      <div class="log" id="log"></div>
+    </div>
+    <div class="tblock" id="tblock"></div>
+    <div class="stamp" id="verdict"></div>
+  </div>
+</div></div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA,S=D.spec,R=D.report;
+const $=id=>document.getElementById(id);
+const f=(n,d=1)=>Number(n).toLocaleString('en-US',{maximumFractionDigits:d});
+const mass=g=>g>=1000?f(g/1000,2)+' kg':f(g,0)+' g';
+const dims=p=>p.shape==='box'?p.size.join(' × '):'⌀'+(p.size.r*2)+' × '+p.size.h;
+const imgTop=60,imgH=780,zMax=660;
+const zy=z=>imgTop+imgH-8-(z/zMax)*(imgH-60);
+
+$('figTag').textContent=`FIG.1 — ${S.name.toUpperCase()} · EXPLODED · SCALE 1:2 · UNITS ${S.units.toUpperCase()}`;
+$('brief').textContent='“'+D.brief+'”';
+$('verdict').textContent=R.pass?'PASSED':'FAILED';
+if(!R.pass)$('verdict').style.borderColor='#ffb0a0',$('verdict').style.color='#ffb0a0';
+
+/* callouts 1..5 by part z */
+const co=$('callouts');
+S.parts.forEach((p,i)=>{
+  const el=document.createElement('div');el.className='callout';
+  el.style.top=(zy(p.position[2])-14)+'px';
+  el.innerHTML=`<span class="leader"></span><span class="nm"><span class="num">${i+1}</span>${p.id}</span>${dims(p)} ${S.units} · ${p.material}`;
+  co.appendChild(el);
+});
+/* dimension ticks at joint anchors */
+const dr=$('dimRail');
+S.joints.forEach((j,i)=>{
+  const y=zy(j.anchor[2]);
+  const t=document.createElement('div');t.className='tick';t.style.top=y+'px';dr.appendChild(t);
+  const l=document.createElement('div');l.className='tickLbl';l.style.top=y+'px';
+  l.textContent=`J${i+1} ${j.type} z=${f(j.anchor[2],1)}`;dr.appendChild(l);
+});
+$('mats').innerHTML=Object.entries(S.materials).map(([k,m])=>
+  `<div><span class="sw" style="background:${m.color}"></span>${k} · ρ ${f(m.density,0)} kg/m³</div>`).join('');
+const tot=D.measures.reduce((a,m)=>a+m.massG,0);
+$('cutNote').innerHTML=`NOTE — ALL DIMS IN ${S.units.toUpperCase()}.<br>ENVELOPE ⌀160 × 665 ${S.units.toUpperCase()}.<br>TOTAL MASS ${mass(tot)}.<br>MIN CLEARANCE ${S.tests.min_clearance_mm} ${S.units.toUpperCase()} · MAX TIP ${S.tests.max_tip_angle_deg}°.`;
+
+$('specTable').innerHTML='<tr><th>NO</th><th>PART</th><th>SHAPE</th><th>DIMS</th><th>MATL</th><th>MASS</th></tr>'+
+  D.measures.map((m,i)=>`<tr><td>${i+1}</td><td>${m.id}</td><td>${m.shape}</td><td>${m.dims.map(d=>f(d,1)).join('×')}</td><td>${m.material}</td><td>${mass(m.massG)}</td></tr>`).join('');
+$('checks').innerHTML=R.checks.map(c=>
+  `<div class="chk"><span class="st">${c.status==='pass'?'✓':'✗'}</span><span class="nm">${c.name}</span><span class="dt" title="${c.detail.replace(/"/g,'')}">${c.detail}</span></div>`).join('');
+$('seq').innerHTML=D.plan.map(s=>s.kind==='place'
+  ?`<div class="p"><span class="sn">${s.step}</span><span>${s.glyph} ${s.part} — ${mass(s.massG)}</span><span class="arm">ARM ${s.arm}</span></div>`
+  :`<div class="j">⌖ ${s.type} joint · ${s.a}~${s.b} @ z=${f(s.anchor[2],1)}</div>`).join('');
+$('log').innerHTML=D.log.map(l=>`<div>▸ ${l}</div>`).join('');
+$('tblock').innerHTML=`
+  <div class="big"><span class="k">TITLE</span>${S.name.toUpperCase()}</div>
+  <div><span class="k">DWG NO</span>IB-${String(D.figures[0].figNum).padStart(4,'0')}</div>
+  <div><span class="k">STATUS</span>${R.pass?'APPROVED':'REJECTED'}</div>
+  <div><span class="k">DRAWN BY</span>INKBENCH AGENT</div>
+  <div><span class="k">SCALE</span>1:2 · ${S.units.toUpperCase()}</div>
+  <div><span class="k">VERIFY TIME</span>${f(R.timingMs,0)} ms</div>`;
+$('rerun').onclick=()=>{$('log').innerHTML+=`<div>▸ brief re-issued ▸ ${D.brief}</div>`;$('log').scrollTop=1e6};
+
+const stage=$('stage');
+function fit(){stage.style.transform=`translate(-50%,-50%) scale(${Math.min(innerWidth/1700,innerHeight/900)})`}
+addEventListener('resize',fit);fit();
+</script>
+</body>
+</html>

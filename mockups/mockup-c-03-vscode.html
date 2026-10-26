@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1700">
+<title>desk-lamp.spec.json — inkbench — Visual Studio Code</title>
+<style>
+:root{
+  --act:#333333; --side:#252526; --ed:#1e1e1e; --pan:#1e1e1e;
+  --line:#2b2b2b; --line2:#3c3c3c; --hover:#2a2d2e;
+  --txt:#cccccc; --mut:#8b8b8b; --dim:#6a6a6a;
+  --acc:#007acc; --acc2:#3794ff;
+  --ok:#4ec9b0; --err:#f48771; --warn:#cca700;
+  --json-key:#9cdcfe; --json-str:#ce9178; --json-num:#b5cea8; --json-pun:#d4d4d4;
+  --mono:"SF Mono","Cascadia Code",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--ed);color:var(--txt);overflow:hidden;display:flex;flex-direction:column;
+  font:13px/1.5 "Segoe UI","SF Pro Text",-apple-system,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:1.5px solid var(--acc);outline-offset:-1px}
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-thumb{background:#424242;border:3px solid var(--ed);border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+
+#workbench{flex:1;display:flex;min-height:0}
+
+/* activity bar */
+#activity{width:48px;flex:0 0 48px;background:var(--act);display:flex;flex-direction:column;align-items:center;padding-top:6px}
+.ab{width:46px;height:44px;display:grid;place-items:center;color:#858585;font-size:20px;position:relative;cursor:pointer}
+.ab:hover{color:#fff}
+.ab.on{color:#fff}
+.ab.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;background:#fff}
+.ab .badge{position:absolute;top:6px;right:8px;min-width:14px;height:14px;border-radius:7px;background:var(--acc);
+  color:#fff;font:600 9px/14px "Segoe UI",sans-serif;text-align:center;padding:0 3px}
+.ab.bot{margin-top:auto}
+
+/* sidebar */
+#side{width:272px;flex:0 0 272px;background:var(--side);display:flex;flex-direction:column;min-height:0;border-right:1px solid #1a1a1a}
+.side-h{height:34px;display:flex;align-items:center;padding:0 18px;font-size:11px;letter-spacing:.05em;color:#bbb;
+  text-transform:uppercase}
+.sview{border-top:1px solid var(--line2)}
+.sview-h{height:26px;display:flex;align-items:center;gap:5px;padding:0 8px;font-size:11px;font-weight:700;
+  color:#bbb;cursor:pointer;user-select:none}
+.sview-h .car{font-size:10px}
+.tree{overflow-y:auto;font-size:12.5px;padding-bottom:6px;max-height:290px}
+.ti{display:flex;align-items:center;gap:5px;height:23px;padding:0 8px;white-space:nowrap;cursor:pointer;color:#c8c8c8}
+.ti:hover{background:var(--hover)}
+.ti.on{background:#37373d}
+.ti .tw{width:14px;flex:0 0 14px;text-align:center;font-size:9px;color:#8b8b8b}
+.ti .fi{width:15px;flex:0 0 15px;font-size:11px}
+.ti .nm{overflow:hidden;text-overflow:ellipsis}
+.ti .ct{margin-left:auto;font-size:10px;color:var(--dim);padding-left:8px}
+.ti.d1{padding-left:20px}.ti.d2{padding-left:38px}.ti.d3{padding-left:56px}
+.jcol{color:#c586c0}.jbox{color:#4fc1ff}.jcyl{color:#4ec9b0}.jcone{color:#dcdcaa}
+
+/* brief box */
+#briefbox{margin:8px;background:#3c3c3c;border:1px solid #3c3c3c;border-radius:2px}
+#briefbox textarea{width:100%;background:transparent;border:0;resize:none;padding:7px 9px;height:52px;
+  font:12px/1.5 "Segoe UI",sans-serif;color:#ddd;display:block}
+#briefbox textarea:focus{outline:none}
+#briefbox textarea::placeholder{color:#888}
+#briefbox:focus-within{border-color:var(--acc)}
+#commit{display:block;width:calc(100% - 16px);margin:8px;height:28px;background:var(--acc);color:#fff;
+  border-radius:2px;font-size:12px;text-align:center}
+#commit:hover{background:#1a85d6}
+#commit:disabled{opacity:.5;cursor:default}
+
+/* editor column */
+#edcol{flex:1;display:flex;flex-direction:column;min-width:0}
+#tabs{height:35px;flex:0 0 35px;background:#252526;display:flex;align-items:stretch;overflow:hidden}
+.tab{display:flex;align-items:center;gap:7px;padding:0 12px;font-size:12.5px;color:#969696;
+  background:#2d2d2d;border-right:1px solid #1e1e1e;cursor:pointer;min-width:0}
+.tab .fi{font-size:11px}
+.tab.on{background:var(--ed);color:#fff;border-top:1px solid var(--acc)}
+.tab .x{border-radius:3px;padding:0 3px;visibility:hidden}
+.tab:hover .x{visibility:visible}
+.tab .x:hover{background:#4a4a4a}
+#crumbs{height:24px;flex:0 0 24px;display:flex;align-items:center;gap:6px;padding:0 14px;
+  font-size:12px;color:#8b8b8b;border-bottom:1px solid #1a1a1a}
+#groups{flex:1;display:flex;min-height:0}
+.grp{min-width:0;display:flex;flex-direction:column}
+#g1{flex:0 0 44%;border-right:1px solid #141414}
+#g2{flex:1}
+.gtab{height:30px;flex:0 0 30px;display:flex;align-items:center;gap:7px;padding:0 12px;font-size:12px;
+  background:#252526;color:#969696;border-bottom:1px solid #141414}
+.gtab .on{color:#fff}
+.gbody{flex:1;overflow:auto;position:relative;background:var(--ed)}
+
+/* image preview */
+#preview{display:grid;place-items:center;height:100%;padding:18px}
+#preview img{max-height:100%;max-width:100%;border:1px solid #3c3c3c;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+#preview .meta{position:absolute;bottom:10px;left:14px;font:11px var(--mono);color:#6a6a6a}
+
+/* code */
+.code{font:12.5px/1.55 var(--mono);padding:8px 0;min-width:100%}
+.cl{white-space:pre;display:flex}
+.cl .ln{flex:0 0 44px;text-align:right;padding-right:14px;color:#5a5a5a;user-select:none}
+.cl .tx{flex:1;padding-right:20px}
+.k{color:var(--json-key)}.s{color:var(--json-str)}.n{color:var(--json-num)}.p{color:var(--json-pun)}
+.b{color:#569cd6}
+.cl:hover{background:#252525}
+.cl.hl{background:#282828}
+
+/* bottom panel */
+#bottom{height:212px;flex:0 0 212px;background:var(--pan);border-top:1px solid #2b2b2b;display:flex;flex-direction:column}
+.pbtabs{height:32px;flex:0 0 32px;display:flex;align-items:center;gap:18px;padding:0 16px;
+  font-size:11px;text-transform:uppercase;color:#969696;border-bottom:1px solid #222}
+.pbtabs .t{cursor:pointer;padding:4px 0;position:relative}
+.pbtabs .t.on{color:#e7e7e7;border-bottom:1.5px solid #e7e7e7}
+.pbtabs .bc{margin-left:4px;font-size:9.5px;background:#4d4d4d;border-radius:8px;padding:1px 6px;color:#ccc}
+.pbtabs .x{margin-left:auto;font-size:13px;cursor:pointer;color:#969696}
+#pbbody{flex:1;display:flex;min-height:0}
+#probs{flex:1;overflow-y:auto;border-right:1px solid #222;padding:6px 0}
+.pr{display:flex;align-items:center;gap:10px;height:24px;padding:0 16px;font-size:12px;cursor:default}
+.pr:hover{background:var(--hover)}
+.pr .pi{width:15px;text-align:center;flex:0 0 15px}
+.pr.ok .pi{color:var(--ok)}
+.pr .pm{flex:1;color:#c8c8c8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr .ps{font:10.5px var(--mono);color:var(--dim);flex:0 0 auto}
+#term{flex:0 0 46%;overflow-y:auto;padding:8px 14px;font:12px/1.75 var(--mono);color:#b8b8b8}
+#term .p{color:var(--acc2)}
+#term .g{color:var(--ok)}
+#term .prompt{color:#569cd6}
+
+/* status bar */
+#status{height:23px;flex:0 0 23px;background:var(--acc);display:flex;align-items:center;gap:14px;
+  padding:0 12px;color:#fff;font-size:11.5px;user-select:none}
+#status .i{display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+#status .i:hover{background:rgba(255,255,255,.12)}
+#status .right{margin-left:auto;display:flex;gap:14px}
+#status .err{color:#ffd7d7}
+</style>
+</head>
+<body>
+
+<div id="workbench">
+  <!-- activity bar -->
+  <div id="activity">
+    <div class="ab on" title="Explorer (Ctrl+Shift+E)">▤</div>
+    <div class="ab" title="Search (Ctrl+Shift+F)">⌕</div>
+    <div class="ab" title="Source Control">⑂<span class="badge" id="scbadge">1</span></div>
+    <div class="ab" title="Run and Debug — verification">▷<span class="badge" id="ckbadge"></span></div>
+    <div class="ab" title="Extensions">⊞</div>
+    <div class="ab bot" title="Accounts">◉</div>
+    <div class="ab" title="Manage — settings">⚙</div>
+  </div>
+
+  <!-- sidebar -->
+  <div id="side">
+    <div class="side-h">Explorer — inkbench</div>
+    <div class="sview">
+      <div class="sview-h"><span class="car">▾</span> BRIEF — SOURCE CONTROL</div>
+      <div id="briefbox"><textarea id="brief" spellcheck="false" placeholder="Describe a part to design…"></textarea></div>
+      <button id="commit">✓ Submit Brief</button>
+    </div>
+    <div class="sview" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="sview-h"><span class="car">▾</span> SPEC.WORKSPACE</div>
+      <div class="tree" id="tree" style="max-height:none;flex:1"></div>
+    </div>
+    <div class="sview">
+      <div class="sview-h"><span class="car">▾</span> BUILD PLAN — TIMELINE</div>
+      <div class="tree" id="plantree" style="max-height:190px"></div>
+    </div>
+  </div>
+
+  <!-- editor column -->
+  <div id="edcol">
+    <div id="tabs">
+      <div class="tab on"><span class="fi" style="color:#4ec9b0">▧</span>render.blueprint<span class="x">×</span></div>
+      <div class="tab"><span class="fi" style="color:#dcdcaa">{ }</span>spec.json<span class="x">×</span></div>
+      <div class="tab"><span class="fi" style="color:#569cd6">▤</span>report.checks<span class="x">×</span></div>
+      <div class="tab"><span class="fi" style="color:#c586c0">⑂</span>plan.diff<span class="x">×</span></div>
+    </div>
+    <div id="crumbs"><span>workspace</span>›<span>spec</span>›<span id="crumbfile">render.blueprint</span></div>
+    <div id="groups">
+      <div class="grp" id="g1">
+        <div class="gtab"><span class="on">▧ render.blueprint</span></div>
+        <div class="gbody" id="preview">
+          <img src="lamp_flat.png" alt="assembled render preview">
+          <div class="meta" id="pmeta"></div>
+        </div>
+      </div>
+      <div class="grp" id="g2">
+        <div class="gtab"><span class="on">{ } spec.json</span><span style="color:#6a6a6a">— generated</span></div>
+        <div class="gbody"><div class="code" id="code"></div></div>
+      </div>
+    </div>
+    <div id="bottom">
+      <div class="pbtabs">
+        <span class="t on">Problems<span class="bc" id="pbc"></span></span>
+        <span class="t on">Terminal</span>
+        <span class="t">Output</span><span class="t">Debug Console</span>
+        <span class="x">⌃</span>
+      </div>
+      <div id="pbbody">
+        <div id="probs"></div>
+        <div id="term"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="status">
+  <span class="i">⑂ main*</span>
+  <span class="i"><span id="st-err">⊘ 0</span> <span id="st-ok"></span></span>
+  <span class="i" id="st-sync">⟳ verified</span>
+  <div class="right">
+    <span class="i" id="st-fig"></span>
+    <span class="i" id="st-timing"></span>
+    <span class="i">units: mm</span>
+    <span class="i">UTF-8</span>
+    <span class="i">inkbench v1</span>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const D=window.DATA,$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const checks=D.report.checks,passed=checks.filter(c=>c.status==='pass').length;
+const fig=D.figures[0];
+
+$('#ckbadge').textContent=checks.length;
+$('#scbadge').textContent=D.attempts;
+$('#st-ok').innerHTML='✓ '+passed;
+$('#st-sync').textContent=D.report.pass?'⟳ verified':'⟳ failed';
+$('#st-fig').textContent='FIG-'+fig.figNum+' '+fig.name.toLowerCase().replace(/\s/g,'-');
+$('#st-timing').textContent='◷ '+D.report.timingMs.toFixed(1)+'ms';
+$('#pmeta').textContent='560×956 · toon render · '+D.spec.parts.length+' parts · '+D.spec.units;
+$('#pbc').textContent=checks.length+' resolved';
+$('#brief').value=D.brief;
+
+/* ---- explorer tree ---- */
+const gi={box:'▯',cylinder:'⬭',cone:'△'};
+let t='';
+t+=`<div class="ti"><span class="tw">▾</span><span class="fi jcol">▣</span><span class="nm">desk-lamp.spec.json</span></div>`;
+t+=`<div class="ti d1"><span class="tw">▾</span><span class="fi" style="color:#dcb67a">▦</span><span class="nm">parts</span><span class="ct">${D.spec.parts.length}</span></div>`;
+D.spec.parts.forEach(p=>{
+  t+=`<div class="ti d2"><span class="tw"></span><span class="fi ${p.shape==='box'?'jbox':p.shape==='cylinder'?'jcyl':'jcone'}">${gi[p.shape]||'▯'}</span>
+    <span class="nm">${esc(p.id)}.part</span><span class="ct">${esc(p.material)}</span></div>`;
+});
+t+=`<div class="ti d1"><span class="tw">▾</span><span class="fi" style="color:#dcb67a">▦</span><span class="nm">joints</span><span class="ct">${D.spec.joints.length}</span></div>`;
+D.spec.joints.forEach(j=>{
+  t+=`<div class="ti d2"><span class="tw"></span><span class="fi jcol">⧉</span>
+    <span class="nm">${esc(j.a)}↔${esc(j.b)}.${esc(j.type)}</span><span class="ct">${j.type==='fixed'?'fix':'rev'}</span></div>`;
+});
+t+=`<div class="ti d1"><span class="tw">▸</span><span class="fi" style="color:#dcb67a">▦</span><span class="nm">materials</span><span class="ct">${Object.keys(D.spec.materials).length}</span></div>`;
+t+=`<div class="ti d1"><span class="tw"></span><span class="fi" style="color:#6a6a6a">≡</span><span class="nm">tests.json</span></div>`;
+t+=`<div class="ti"><span class="tw"></span><span class="fi" style="color:#569cd6">≡</span><span class="nm">report.checks</span></div>`;
+t+=`<div class="ti"><span class="tw"></span><span class="fi" style="color:#4ec9b0">≡</span><span class="nm">render.blueprint</span></div>`;
+$('#tree').innerHTML=t;
+
+/* ---- plan timeline ---- */
+let pt='';
+D.plan.forEach(op=>{
+  if(op.kind==='place'){
+    pt+=`<div class="ti"><span class="tw"></span><span class="fi" style="color:#569cd6">●</span>
+      <span class="nm">${op.step} place ${esc(op.part)}</span><span class="ct">arm ${op.arm}</span></div>`;
+  }else{
+    pt+=`<div class="ti"><span class="tw"></span><span class="fi" style="color:#c586c0">◆</span>
+      <span class="nm">${esc(op.type)} ${esc(op.a)}↔${esc(op.b)}</span><span class="ct">${op.late?'late':'inline'}</span></div>`;
+  }
+});
+$('#plantree').innerHTML=pt;
+
+/* ---- spec.json with syntax highlight ---- */
+const raw=JSON.stringify(D.spec,null,2);
+const lines=raw.split('\n');
+const re=/("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+\.?\d*(?:e[+-]?\d+)?)|([{}[\],:])/g;
+const html=lines.map((ln,i)=>{
+  const h=esc(ln).replace(re,(m,str,col,num,pun)=>{
+    if(str!==undefined)return col?`<span class="k">${str}</span>${col}`:`<span class="s">${str}</span>`;
+    if(num!==undefined)return `<span class="n">${num}</span>`;
+    if(pun!==undefined)return `<span class="p">${pun}</span>`;
+    return m;
+  });
+  return `<div class="cl${i<4?' hl':''}"><span class="ln">${i+1}</span><span class="tx">${h||' '}</span></div>`;
+}).join('');
+$('#code').innerHTML=html;
+
+/* ---- problems (checks) ---- */
+$('#probs').innerHTML=checks.map(c=>`
+  <div class="pr ${c.status==='pass'?'ok':''}">
+    <span class="pi">${c.status==='pass'?'✓':'✗'}</span>
+    <span class="pm">${esc(c.name)} — ${esc(c.detail.slice(0,80))}${c.detail.length>80?'…':''}</span>
+    <span class="ps">${c.measured?(+c.measured).toFixed(2):''} ${c.status==='pass'?'[resolved]':'[error]'}</span>
+  </div>`).join('');
+
+/* ---- terminal ---- */
+const term=$('#term');
+term.innerHTML='<div><span class="prompt">inkbench@local</span> <span class="p">~/figures</span> $ ink run --verify --plan</div>';
+D.log.forEach(l=>{
+  const d=document.createElement('div');
+  if(/pass|✓|verified/i.test(l))d.className='g';
+  else if(/▸/.test(l))d.className='p';
+  d.textContent=l;term.appendChild(d);
+});
+term.innerHTML+=`<div><span class="prompt">inkbench@local</span> <span class="p">~/figures</span> $ <span style="background:#666;color:#1e1e1e">&nbsp;</span></div>`;
+term.scrollTop=term.scrollHeight;
+
+/* ---- submit brief ---- */
+const brief=$('#brief'),commit=$('#commit');
+function submit(){
+  const v=brief.value.trim();if(!v)return;
+  commit.disabled=true;commit.textContent='✓ Queued — designing…';
+  const d=document.createElement('div');d.textContent='brief ▸ '+v;term.appendChild(d);
+  const d2=document.createElement('div');d2.className='p';d2.textContent='designing…';term.appendChild(d2);
+  term.scrollTop=term.scrollHeight;
+  setTimeout(()=>{commit.disabled=false;commit.innerHTML='✓ Submit Brief'},1100);
+}
+commit.addEventListener('click',submit);
+brief.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))submit()});
+document.querySelectorAll('.ti').forEach(el=>el.addEventListener('click',()=>{
+  document.querySelectorAll('.ti').forEach(x=>x.classList.remove('on'));el.classList.add('on');
+}));
+</script>
+</body>
+</html>

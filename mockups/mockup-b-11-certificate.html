@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Certificate of Verification</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#17251f}
+  body{font-family:"Cormorant Garamond",Georgia,serif;color:#1f4d3a}
+  #stage{position:absolute;left:50%;top:50%;width:1700px;height:900px;transform:translate(-50%,-50%);
+    background:radial-gradient(1100px 720px at 50% 42%,#24382f 0%,#17251f 75%);display:flex;align-items:center;justify-content:center}
+  .doc{position:relative;width:1450px;height:806px;background:#f6f0dc;
+    background-image:repeating-linear-gradient(45deg,rgba(31,77,58,.022) 0 2px,transparent 2px 6px);
+    box-shadow:0 26px 70px rgba(0,0,0,.6)}
+  .b1{position:absolute;inset:14px;border:2.5px solid #1f4d3a;pointer-events:none}
+  .b2{position:absolute;inset:21px;border:1px solid #1f4d3a;pointer-events:none}
+  .b3{position:absolute;inset:28px;border:1px solid rgba(31,77,58,.55);pointer-events:none}
+  .corner{position:absolute;width:44px;height:44px;color:#1f4d3a}
+  .corner svg{width:100%;height:100%}
+  .cTL{top:12px;left:12px}.cTR{top:12px;right:12px;transform:rotate(90deg)}
+  .cBR{bottom:12px;right:12px;transform:rotate(180deg)}.cBL{bottom:12px;left:12px;transform:rotate(270deg)}
+  .inner{position:absolute;inset:42px 54px;display:flex;flex-direction:column}
+  .head{text-align:center;border-bottom:1px solid #1f4d3a;padding-bottom:12px}
+  .head .bur{font-size:15px;letter-spacing:9px;text-transform:uppercase}
+  .head h1{font-size:52px;font-weight:600;font-variant:small-caps;letter-spacing:4px;margin:4px 0 2px;line-height:1}
+  .head .sub{font-size:14px;font-style:italic;letter-spacing:1px}
+  .head .no{position:absolute;right:0;top:8px;text-align:right;font-size:12px;letter-spacing:1px;line-height:1.5}
+  .main{flex:1;display:grid;grid-template-columns:1fr 400px;gap:40px;min-height:0;padding-top:16px}
+  .cert{overflow-y:auto;scrollbar-width:thin;padding-right:10px;min-height:0}
+  .cert p{font-size:16.5px;line-height:1.62;text-align:justify;margin-bottom:12px}
+  .cert .briefq{text-align:center;font-style:italic;font-size:19px;margin:8px 60px 12px}
+  table.tests{width:100%;border-collapse:collapse;font-size:14px;margin:4px 0 14px}
+  table.tests th{border-top:1.5px solid #1f4d3a;border-bottom:1px solid #1f4d3a;font-size:11.5px;letter-spacing:2.5px;
+    text-transform:uppercase;text-align:left;padding:4px 8px;font-weight:600}
+  table.tests td{border-bottom:1px dotted rgba(31,77,58,.5);padding:4.5px 8px}
+  table.tests td.num{text-align:right;font-variant-numeric:tabular-nums}
+  table.tests .res{font-weight:600;letter-spacing:2px}
+  .sched{font-size:13.5px;line-height:1.55;border:1px solid rgba(31,77,58,.45);padding:8px 14px;column-count:2;column-gap:30px}
+  .sched .s{white-space:nowrap}
+  .sched .s i{font-style:normal;font-weight:600}
+  .sched .j{font-style:italic;opacity:.8;font-size:12.5px}
+  .sigs{display:flex;gap:60px;margin-top:14px}
+  .sig{flex:1;text-align:center}
+  .sig svg{width:150px;height:40px}
+  .sig .line{border-top:1.5px solid #1f4d3a;font-size:11.5px;letter-spacing:2px;text-transform:uppercase;padding-top:4px}
+  .petition{display:flex;gap:10px;margin-top:12px;align-items:center}
+  .petition .lb{font-size:12px;letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
+  .petition input{flex:1;font:inherit;font-style:italic;font-size:15px;border:0;border-bottom:1.5px solid #1f4d3a;
+    background:transparent;padding:4px 6px;outline:none;min-width:0}
+  .petition input:focus{border-bottom-color:#8a6d2f}
+  .petition button{font:inherit;font-size:12px;letter-spacing:2px;text-transform:uppercase;background:#1f4d3a;color:#f6f0dc;
+    border:0;padding:7px 18px;cursor:pointer;transition:.15s}
+  .petition button:hover{background:#8a6d2f}
+  /* right column */
+  .right{display:flex;flex-direction:column;align-items:center;min-height:0}
+  .seal{width:196px;height:196px;position:relative;flex:none;margin-top:2px;
+    background:radial-gradient(circle at 38% 34%,#2a6b50,#16382a 75%);
+    border-radius:48% 52% 51% 49%/55% 47% 53% 45%;
+    box-shadow:inset 0 -6px 18px rgba(0,0,0,.45),inset 0 6px 14px rgba(255,255,255,.14),0 8px 22px rgba(0,0,0,.4)}
+  .seal .ring{position:absolute;inset:16px;border:2px solid rgba(246,240,220,.75);border-radius:48% 52% 51% 49%/53% 49% 51% 47%}
+  .seal .ring2{position:absolute;inset:26px;border:1px dashed rgba(246,240,220,.55);border-radius:50%}
+  .seal .tx{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:#f6f0dc;text-align:center;line-height:1.25}
+  .seal .tx .a{font-size:11px;letter-spacing:3px}
+  .seal .tx .b{font-size:34px;font-weight:600;font-variant:small-caps;letter-spacing:3px}
+  .seal .tx .c{font-size:9.5px;letter-spacing:2px;opacity:.85}
+  .exhibit{margin-top:18px;border:1px solid #1f4d3a;background:#fbf6e6;padding:8px;width:300px;flex:none}
+  .exhibit img{display:block;width:100%;height:190px;object-fit:cover;filter:sepia(.25) contrast(1.05)}
+  .exhibit .cap{font-size:12px;font-style:italic;text-align:center;margin-top:6px}
+  .reg{flex:1;min-height:0;width:100%;margin-top:14px;border-top:1px solid #1f4d3a;padding-top:8px}
+  .reg h6{font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
+  .reg .lg{font-size:12.5px;font-style:italic;line-height:1.65;max-height:120px;overflow-y:auto;scrollbar-width:thin}
+  .reg .lg div::before{content:"§ ";font-style:normal}
+</style>
+</head>
+<body>
+<div id="stage"><div class="doc">
+  <div class="b1"></div><div class="b2"></div><div class="b3"></div>
+  <span class="corner cTL"><svg viewBox="0 0 44 44"><path d="M2 42V14Q2 2 14 2h28v4H16Q6 6 6 16v26z" fill="currentColor"/><circle cx="16" cy="16" r="4" fill="currentColor"/></svg></span>
+  <span class="corner cTR"><svg viewBox="0 0 44 44"><path d="M2 42V14Q2 2 14 2h28v4H16Q6 6 6 16v26z" fill="currentColor"/><circle cx="16" cy="16" r="4" fill="currentColor"/></svg></span>
+  <span class="corner cBR"><svg viewBox="0 0 44 44"><path d="M2 42V14Q2 2 14 2h28v4H16Q6 6 6 16v26z" fill="currentColor"/><circle cx="16" cy="16" r="4" fill="currentColor"/></svg></span>
+  <span class="corner cBL"><svg viewBox="0 0 44 44"><path d="M2 42V14Q2 2 14 2h28v4H16Q6 6 6 16v26z" fill="currentColor"/><circle cx="16" cy="16" r="4" fill="currentColor"/></svg></span>
+  <div class="inner">
+    <div class="head">
+      <div class="no">CERTIFICATE № IB-<span id="cno"></span><br>REGISTERED AT THE BENCH<br>PAGE 1 OF 1</div>
+      <div class="bur">Inkbench Verification Bureau</div>
+      <h1>Certificate of Geometric Verification</h1>
+      <div class="sub">issued under the authority of the workbench, pursuant to a submitted brief</div>
+    </div>
+    <div class="main">
+      <div class="cert">
+        <p>This is to certify that the assembly designated <b id="cname"></b>, having been designed, rendered and
+          measured by the resident agent, was this day examined against <b id="cnc"></b> statutory checks and found to be
+          <b id="cverdict"></b>. The article comprises <span id="cnpts"></span>, of combined mass <span id="cmass"></span>,
+          resolved in <span id="cms"></span> millisecond(s) over <span id="catt"></span> attempt(s).</p>
+        <p class="briefq">“<span id="cbrief"></span>”</p>
+        <table class="tests" id="tests"></table>
+        <div class="sched" id="sched"></div>
+        <div class="sigs">
+          <div class="sig"><svg viewBox="0 0 150 40"><path d="M8 30C22 8 34 34 44 18s18-6 24 10 20-14 30-2 26-10 34 2" fill="none" stroke="#1f4d3a" stroke-width="2"/></svg>
+            <div class="line">Chief Verification Agent</div></div>
+          <div class="sig"><svg viewBox="0 0 150 40"><path d="M10 26C26 36 30 6 46 22s14 16 26 4 18 8 30-8 20 14 34 6" fill="none" stroke="#1f4d3a" stroke-width="2"/></svg>
+            <div class="line">Build Supervisor — Arms A / B</div></div>
+        </div>
+        <div class="petition"><span class="lb">Petition for re-inspection:</span>
+          <input id="pet" spellcheck="false"><button id="petBtn">SUBMIT ▸</button></div>
+      </div>
+      <div class="right">
+        <div class="seal"><span class="ring"></span><span class="ring2"></span>
+          <div class="tx"><span class="a">★ INKBENCH ★</span><span class="b" id="sealw"></span><span class="c" id="seald"></span></div></div>
+        <div class="exhibit"><img src="lamp_flat.png" alt="Exhibit A"><div class="cap" id="ecap"></div></div>
+        <div class="reg"><h6>Registry Entries</h6><div class="lg" id="reg"></div></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA,S=D.spec,R=D.report;
+const $=id=>document.getElementById(id);
+const f=(n,d=1)=>Number(n).toLocaleString('en-US',{maximumFractionDigits:d});
+const mass=g=>g>=1000?f(g/1000,2)+' kg':f(g,0)+' g';
+const tot=D.measures.reduce((a,m)=>a+m.massG,0);
+
+$('cno').textContent=`${D.figures[0].figNum}${String(S.parts.length).padStart(2,'0')}-${String(D.attempts).padStart(3,'0')}`;
+$('cname').textContent=`“${S.name}” (Fig. ${D.figures[0].figNum})`;
+$('cnc').textContent=R.checks.length;
+$('cverdict').textContent=R.pass?'IN CONFORMITY':'NOT IN CONFORMITY';
+$('cnpts').textContent=`${S.parts.length} parts joined by ${S.joints.length} joints`;
+$('cmass').textContent=mass(tot);
+$('cms').textContent=f(R.timingMs,1);
+$('catt').textContent=D.attempts;
+$('cbrief').textContent=D.brief;
+$('sealw').textContent=R.pass?'VERIFIED':'REJECTED';
+$('seald').textContent=`FIG.${D.figures[0].figNum} · ATT.${D.attempts} · ${f(R.timingMs,0)}MS`;
+$('ecap').textContent=`Exhibit A — ${S.name.toLowerCase()}, as rendered (attempt ${D.attempts}).`;
+$('pet').value=D.brief;
+
+$('tests').innerHTML='<tr><th>§</th><th>Examination</th><th>Finding</th><th style="text-align:right">Measured</th></tr>'+
+  R.checks.map((c,i)=>`<tr title="${c.detail.replace(/"/g,'')}"><td>${i+1}</td><td>${c.name}</td>
+  <td class="res">${c.status.toUpperCase()}</td><td class="num">${c.measured?f(c.measured,2)+' '+S.units:'—'}</td></tr>`).join('')+
+  `<tr><td></td><td><b>Schedule of parts</b></td><td colspan="2" class="num">`+
+  D.measures.map(m=>`${m.id}: ${m.dims.map(d=>f(d,0)).join('×')}`).join('; ')+` ${S.units}</td></tr>`;
+
+$('sched').innerHTML=D.plan.map(s=>s.kind==='place'
+  ?`<div class="s"><i>${s.step}.</i> ${s.part.replace('_',' ')} — Arm ${s.arm}, ${mass(s.massG)}</div>`
+  :`<div class="j">&nbsp;&nbsp;↳ ${s.type} · ${s.a} ~ ${s.b}</div>`).join('');
+$('reg').innerHTML=D.log.map(l=>`<div>${l}</div>`).join('');
+
+$('petBtn').onclick=()=>{$('reg').innerHTML+=`<div>petition lodged ▸ ${$('pet').value||D.brief}</div>`;$('reg').scrollTop=1e6};
+$('pet').addEventListener('keydown',e=>{if(e.key==='Enter')$('petBtn').click()});
+
+const stage=document.getElementById('stage');
+function fit(){stage.style.transform=`translate(-50%,-50%) scale(${Math.min(innerWidth/1700,innerHeight/900)})`}
+addEventListener('resize',fit);fit();
+</script>
+</body>
+</html>

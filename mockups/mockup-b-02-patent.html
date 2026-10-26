@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Patent Plate</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#2a261e}
+  body{font-family:Georgia,"Times New Roman",serif;color:#241f14}
+  #stage{position:absolute;left:50%;top:50%;width:1700px;height:900px;transform:translate(-50%,-50%);
+    background:#f4eeda;border:1px solid #8a7f63;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+  .page{position:absolute;inset:26px;border:1px solid #241f14;outline:3px double #241f14;outline-offset:5px;padding:0 30px}
+  header{text-align:center;border-bottom:2px solid #241f14;padding:16px 0 12px}
+  header .office{font-size:13px;letter-spacing:6px;text-transform:uppercase}
+  header h1{font-size:26px;letter-spacing:3px;font-variant:small-caps;margin:6px 0 4px}
+  header .meta{display:flex;justify-content:center;gap:38px;font-size:11.5px;font-style:italic}
+  .cols{display:flex;gap:0;height:592px;border-bottom:1px solid #241f14}
+  .col{padding:14px 22px;overflow:hidden}
+  .col.refs{width:300px;border-right:1px solid #241f14}
+  .col.plate{flex:1;border-right:1px solid #241f14;text-align:center}
+  .col.claims{width:520px}
+  h4{font-variant:small-caps;letter-spacing:3px;font-size:14px;border-bottom:1px solid #241f14;padding-bottom:5px;margin-bottom:12px;text-align:center}
+  .ref{display:flex;gap:10px;font-size:12.5px;padding:4px 0;align-items:baseline}
+  .ref .n{width:34px;height:34px;border:1.4px solid #241f14;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none;font-style:italic}
+  .ref .txt b{font-variant:small-caps;letter-spacing:1px}
+  .ref .txt span{display:block;font-size:10.5px;font-style:italic;opacity:.75}
+  .refs .sep{border:0;border-top:1px dashed #8a7f63;margin:10px 0}
+  .figbox{position:relative;display:inline-block;margin-top:6px;border:1px solid #241f14;padding:8px;background:#efe7cf}
+  .figbox img{display:block;width:255px;height:435px;object-fit:cover;filter:invert(.94) sepia(.4) saturate(.6) contrast(1.1) brightness(1.02)}
+  .figNum{position:absolute;right:-46px;width:34px;height:34px;border:1.4px solid #241f14;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-style:italic;background:#f4eeda}
+  .figNum::before{content:"";position:absolute;left:100%;top:50%;width:14px;height:1px;background:#241f14}
+  .figcap{margin-top:10px;font-size:13px;letter-spacing:2px}
+  .figcap b{font-variant:small-caps}
+  .figsub{font-size:10.5px;font-style:italic;opacity:.7;max-width:400px;margin:4px auto 0}
+  .claim{font-size:11.8px;line-height:1.62;text-align:justify;margin-bottom:11px;text-indent:2em}
+  .claim b{font-variant:small-caps}
+  .claims{overflow-y:auto;scrollbar-width:thin}
+  .bottom{display:flex;height:196px}
+  .bcell{padding:14px 20px;font-size:12px}
+  .bcell+.bcell{border-left:1px solid #241f14}
+  .bcell h4{text-align:left;font-size:12px}
+  .abstract{width:430px}
+  .abstract p{font-size:12.5px;line-height:1.6;font-style:italic}
+  .amend{margin-top:10px;background:none;border:1.4px solid #241f14;font:inherit;font-size:11px;letter-spacing:2px;padding:6px 16px;cursor:pointer;font-variant:small-caps;transition:.15s}
+  .amend:hover{background:#241f14;color:#f4eeda}
+  .exam{flex:1}
+  .exam table{width:100%;border-collapse:collapse;font-size:11px}
+  .exam td,.exam th{border:1px solid #241f14;padding:3.5px 7px;text-align:left}
+  .exam th{font-variant:small-caps;letter-spacing:1px;font-weight:600}
+  .exam .ok{font-style:italic}
+  .wrapper{width:360px;display:flex;flex-direction:column}
+  .wrapper .log{flex:1;overflow:hidden;font-size:10.5px;font-style:italic;line-height:1.7;opacity:.85}
+  .seal{position:absolute;right:52px;top:86px;width:92px;height:92px;border:2px double #7a1f16;border-radius:50%;color:#7a1f16;
+    display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;letter-spacing:1.5px;transform:rotate(10deg);opacity:.8;line-height:1.5;padding:8px}
+  .mode{width:300px}
+  .mode .mi{font-size:11px;padding:2.5px 0;border-bottom:1px dotted #8a7f63;display:flex;gap:8px}
+  .mode .mi:last-child{border:0}
+  .mode .mi i{font-style:normal;font-weight:700}
+</style>
+</head>
+<body>
+<div id="stage"><div class="page">
+  <div class="seal">INKBENCH<br>· VERIFIED ·<br>SPEC.</div>
+  <header>
+    <div class="office">Inkbench Patent Office</div>
+    <h1 id="pTitle"></h1>
+    <div class="meta" id="pMeta"></div>
+  </header>
+  <div class="cols">
+    <div class="col refs"><h4>Reference Signs</h4><div id="refList"></div></div>
+    <div class="col plate">
+      <div class="figbox" id="figbox"><img src="lamp_flat.png" alt="Fig. 1"></div>
+      <div class="figcap" id="figcap"></div>
+      <div class="figsub" id="figsub"></div>
+    </div>
+    <div class="col claims"><h4>Claims</h4><div id="claims"></div></div>
+  </div>
+  <div class="bottom">
+    <div class="bcell abstract"><h4>Abstract of the Disclosure</h4>
+      <p id="abs"></p>
+      <button class="amend" id="amend">File Amendment ↻</button>
+    </div>
+    <div class="bcell exam"><h4>Examiner's Action</h4><table id="exam"></table></div>
+    <div class="bcell mode"><h4>Mode for Carrying Out</h4><div id="mode"></div></div>
+    <div class="bcell wrapper"><h4>File Wrapper</h4><div class="log" id="log"></div></div>
+  </div>
+</div></div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA,S=D.spec,R=D.report;
+const $=id=>document.getElementById(id);
+const f=(n,d=1)=>Number(n).toLocaleString('en-US',{maximumFractionDigits:d});
+const mass=g=>g>=1000?f(g/1000,2)+' kg':f(g,0)+' g';
+const dims=p=>p.shape==='box'?p.size.join('×'):'⌀'+(p.size.r*2)+'×'+p.size.h;
+const v=a=>'('+a.map(x=>f(x,1)).join(', ')+')';
+
+$('pTitle').textContent='“'+S.name+'” — Agent-Generated Specification';
+$('pMeta').innerHTML=
+  `<span>Patent No. IB-${D.figures[0].figNum}${String(S.parts.length)}${String(S.joints.length)}-${D.attempts}</span>`+
+  `<span>Application filed by agent in ${f(R.timingMs,0)} ms</span>`+
+  `<span>${S.parts.length} sheets — Sheet 1</span>`+
+  `<span>Attempts: ${D.attempts}</span>`;
+
+/* numerals: parts 10,12.. joints 20,22.. */
+const pNum={};S.parts.forEach((p,i)=>pNum[p.id]=10+i*2);
+const jNum={};S.joints.forEach((j,i)=>jNum[j.a+'~'+j.b]=20+i*2);
+$('refList').innerHTML=
+  S.parts.map(p=>`<div class="ref"><span class="n">${pNum[p.id]}</span><span class="txt"><b>${p.id.replace('_',' ')}</b><span>${p.shape} · ${dims(p)} ${S.units} · ${p.material}</span></span></div>`).join('')+
+  '<hr class="sep">'+
+  S.joints.map(j=>`<div class="ref"><span class="n">${jNum[j.a+'~'+j.b]}</span><span class="txt"><b>${j.type} joint</b><span>${j.a} ~ ${j.b} · axis ${v(j.axis)}</span></span></div>`).join('');
+
+/* numeral bubbles down the right edge of the figure, y from part z */
+const fb=$('figbox'),zMax=665,imgH=435;
+S.parts.forEach(p=>{
+  const b=document.createElement('div');b.className='figNum';
+  b.style.top=(8+imgH-(p.position[2]/zMax)*(imgH-40)-17)+'px';
+  b.textContent=pNum[p.id];fb.appendChild(b);
+});
+$('figcap').innerHTML=`<b>Fig. 1</b> — perspective view of the ${S.name.toLowerCase()}`;
+$('figsub').textContent=`Showing ${S.parts.length} numbered parts and ${S.joints.length} joints; envelopes and dimensions in ${S.units}.`;
+
+const claimParts=S.parts.map(p=>`a ${p.material} <i>${p.id.replace('_',' ')}</i> of ${p.shape} form measuring ${dims(p)} ${S.units}`).join('; ');
+const jointClaims=S.joints.map((j,i)=>`<div class="claim"><b>${i+2}.</b> The lamp of claim 1, wherein said <i>${j.a.replace('_',' ')}</i> is coupled to said <i>${j.b.replace('_',' ')}</i> by a ${j.type} joint about axis ${v(j.axis)} anchored at ${v(j.anchor)} ${S.units}.</div>`).join('');
+const stab=R.checks.find(c=>c.name==='stability');
+$('claims').innerHTML=
+  `<div class="claim"><b>1.</b> A ${S.name.toLowerCase()} generated from natural-language brief, comprising: ${claimParts}; said parts assembled in the order ${D.report.explodedOrder.join(', ')}.</div>`+
+  jointClaims+
+  `<div class="claim"><b>${S.joints.length+2}.</b> The lamp of claim 1, wherein ${stab?stab.detail:''}, and minimum joint clearance is not less than ${S.tests.min_clearance_mm} ${S.units}.</div>`;
+
+$('abs').textContent=`A workbench method wherein the brief “${D.brief}” is converted by an agent into a geometric specification, rendered, verified against ${R.checks.length} checks, and issued as a two-arm build plan of ${D.plan.filter(s=>s.kind==='place').length} placements.`;
+
+$('exam').innerHTML='<tr><th>§</th><th>Examination</th><th>Result</th><th>Measured</th></tr>'+
+  R.checks.map((c,i)=>`<tr><td>${i+1}.${i+1}</td><td>${c.name}</td><td class="ok">${c.status.toUpperCase()}</td><td>${c.measured?f(c.measured,2):'—'}</td></tr>`).join('')+
+  `<tr><td></td><td><b>Disposition</b></td><td colspan="2"><b>${R.pass?'ALLOWED ✓':'REJECTED'}</b> — ${f(R.timingMs,0)} ms</td></tr>`;
+
+$('mode').innerHTML=D.plan.filter(s=>s.kind==='place').map(s=>
+  `<div class="mi"><i>${s.step}.</i><span>${s.glyph} place <b>${s.part}</b>, arm ${s.arm} — ${mass(s.massG)}</span></div>`).join('');
+$('log').innerHTML=D.log.map(l=>`• ${l}<br>`).join('');
+$('amend').onclick=()=>{$('log').innerHTML+=`• amendment filed ▸ “${D.brief}”<br>`};
+
+const stage=document.getElementById('stage');
+function fit(){stage.style.transform=`translate(-50%,-50%) scale(${Math.min(innerWidth/1700,innerHeight/900)})`}
+addEventListener('resize',fit);fit();
+</script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Telemetry Ground Station</title>
+<style>
+  :root{
+    --bg:#060d16; --panel:#0a1520; --panel2:#0e1c2a; --edge:#1a3242;
+    --cy:#3ad8e8; --cy2:#8ae8f2; --cydim:#2a6a78; --amb:#ffb454; --grn:#4ade80; --red:#ff5348;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--cy2);
+    font-family:var(--mono);font-size:12px}
+  .gs{height:100vh;display:grid;grid-template-rows:58px 1fr 150px;gap:8px;padding:10px;
+    background:linear-gradient(#081019,var(--bg))}
+
+  /* ===== pass strip ===== */
+  header{display:flex;align-items:stretch;gap:0;border:1px solid var(--edge);border-radius:5px;
+    background:linear-gradient(#0e1c2a,#0a1520);overflow:hidden}
+  .hcell{padding:8px 18px;border-right:1px solid var(--edge);display:flex;flex-direction:column;justify-content:center}
+  .hcell .l{font-size:8px;letter-spacing:.3em;color:var(--cydim)}
+  .hcell .v{font-size:16px;color:var(--cy);letter-spacing:.06em}
+  .hcell .v.g{color:var(--grn)}.hcell .v.a{color:var(--amb)}
+  .sig{display:flex;gap:3px;align-items:flex-end;height:18px;margin:0 18px;align-self:center}
+  .sig i{width:7px;background:var(--cy);display:block;border-radius:1px;box-shadow:0 0 6px #3ad8e866}
+  .sig i:nth-child(1){height:5px}.sig i:nth-child(2){height:9px}.sig i:nth-child(3){height:13px}
+  .sig i:nth-child(4){height:17px}.sig i:nth-child(5){height:21px;background:#173040;box-shadow:none}
+  .lock{margin-left:auto;display:flex;align-items:center;padding:0 20px;font-size:11px;letter-spacing:.3em;
+    color:#071018;background:var(--grn);font-weight:700;box-shadow:inset 0 -3px 0 #0003}
+
+  main{display:grid;grid-template-columns:560px 1fr 360px;gap:8px;min-height:0}
+  .panel{background:var(--panel);border:1px solid var(--edge);border-radius:5px;display:flex;flex-direction:column;
+    min-height:0;overflow:hidden}
+  .ph{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--edge);
+    background:var(--panel2)}
+  .ph .t{font-size:9.5px;letter-spacing:.3em;color:var(--cy)}
+  .ph .r{margin-left:auto;font-size:9px;color:var(--cydim)}
+  .ph .dot{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 7px var(--grn)}
+
+  /* telemetry table */
+  .tm{flex:1;overflow:auto;min-height:0;padding:6px 0}
+  .tm .row{display:grid;grid-template-columns:76px 86px 1fr auto;gap:10px;padding:3px 14px;
+    font-size:10px;white-space:nowrap;border-bottom:1px solid #3ad8e80d}
+  .tm .row:hover{background:#3ad8e80d}
+  .tm .f{color:var(--cydim)}
+  .tm .p{color:var(--cy2)}
+  .tm .d{color:#6faebc}
+  .tm .ok{color:var(--grn)}
+  .tm .warn{color:var(--amb)}
+  .tmhead{position:sticky;top:0;display:grid;grid-template-columns:76px 86px 1fr auto;gap:10px;
+    padding:4px 14px;font-size:8px;letter-spacing:.2em;color:var(--cydim);background:var(--panel);border-bottom:1px solid var(--edge)}
+
+  /* tracking monitor */
+  .trk{flex:1;position:relative;background:#0a1520;min-height:0;overflow:hidden;display:flex}
+  .trk img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+    filter:saturate(.9) hue-rotate(-8deg) brightness(.96)}
+  .trk .veil{position:absolute;inset:0;background:linear-gradient(#3ad8e810,transparent 30%,transparent 70%,#3ad8e810);
+    pointer-events:none}
+  .trk .ring{position:absolute;border:1px solid #3ad8e83a;border-radius:50%;pointer-events:none}
+  .trk .x{position:absolute;width:14px;height:14px;pointer-events:none}
+  .trk .x:before,.trk .x:after{content:"";position:absolute;background:var(--cy)}
+  .trk .x:before{left:50%;top:0;bottom:0;width:1px}
+  .trk .x:after{top:50%;left:0;right:0;height:1px}
+  .tl2{position:absolute;font-size:8.5px;letter-spacing:.2em;color:var(--cy);background:#060d16aa;padding:2px 7px;border:1px solid var(--edge)}
+  .limrow{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--edge)}
+  .lim{padding:7px 10px;border-right:1px solid var(--edge);background:var(--panel2)}
+  .lim:last-child{border-right:0}
+  .lim .n{font-size:8px;color:var(--cydim);letter-spacing:.15em}
+  .lim .s{font-size:10px;color:var(--grn);margin-top:2px}
+  .lim .s b{color:var(--cy2);font-weight:400}
+
+  /* uplink */
+  .upl{flex:1;overflow:auto;min-height:0;padding:6px 0}
+  .cmd{display:grid;grid-template-columns:44px 1fr;gap:8px;padding:5px 14px;font-size:10px;
+    border-bottom:1px solid #3ad8e80d;align-items:baseline}
+  .cmd:hover{background:#3ad8e80d}
+  .cmd .sq{color:var(--amb)}
+  .cmd .tx{color:var(--cy2)}
+  .cmd .tx small{display:block;color:var(--cydim);font-size:9px}
+  .cmd .who{color:var(--cy);font-size:9px;letter-spacing:.15em}
+  .dir{padding:10px 14px;border-top:1px solid var(--edge);background:var(--panel2)}
+  .dir .l{font-size:8px;letter-spacing:.3em;color:var(--cydim);margin-bottom:6px}
+  .dir textarea{width:100%;background:#060d16;border:1px solid var(--edge);border-radius:3px;color:var(--cy2);
+    font-family:var(--mono);font-size:10.5px;padding:7px 9px;resize:none;height:50px}
+  .dir textarea:focus{outline:none;border-color:var(--cy);box-shadow:0 0 0 2px #3ad8e822}
+  .dir button{width:100%;margin-top:6px;background:linear-gradient(#134a56,#0c3240);color:var(--cy);
+    border:1px solid var(--edge);font-family:var(--mono);font-size:9.5px;letter-spacing:.25em;padding:8px;
+    border-radius:3px;cursor:pointer}
+  .dir button:hover{background:linear-gradient(#1a5c6a,#0f3d4c);box-shadow:0 0 12px #3ad8e833}
+
+  /* event strip */
+  footer{background:var(--panel);border:1px solid var(--edge);border-radius:5px;display:grid;
+    grid-template-columns:200px 1fr;min-height:0;overflow:hidden}
+  footer .fs{border-right:1px solid var(--edge);padding:10px 14px;display:flex;flex-direction:column;justify-content:center}
+  footer .fs .l{font-size:8px;letter-spacing:.3em;color:var(--cydim)}
+  footer .fs .v{font-size:12px;color:var(--cy);margin-top:2px}
+  .ev{overflow:auto;padding:8px 14px;min-height:0}
+  .ev div{font-size:10px;color:#6faebc;padding:2.5px 0;border-bottom:1px dotted #3ad8e81a;white-space:nowrap}
+  .ev div:last-child{color:var(--grn)}
+</style>
+</head>
+<body>
+<div class="gs">
+  <header id="pass"></header>
+  <main>
+    <div class="panel">
+      <div class="ph"><span class="dot"></span><span class="t">TELEMETRY DECODE — TM/TC</span><span class="r" id="tmrate"></span></div>
+      <div class="tmhead"><span>FRAME</span><span>CHAN</span><span>DATA</span><span>STAT</span></div>
+      <div class="tm" id="tm"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><span class="dot"></span><span class="t">OPTICAL TRACK — ASSEMBLY</span><span class="r" id="azel"></span></div>
+      <div class="trk" id="trk">
+        <img src="lamp_flat.png" alt="render">
+        <div class="veil"></div>
+      </div>
+      <div class="limrow" id="lims"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><span class="dot"></span><span class="t">UPLINK QUEUE — BUILD PLAN</span><span class="r" id="uq"></span></div>
+      <div class="upl" id="upl"></div>
+      <div class="dir">
+        <div class="l">MISSION DIRECTIVE — BRIEF</div>
+        <textarea id="brief" spellcheck="false"></textarea>
+        <button id="uplink">UPLINK DIRECTIVE ▸</button>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <div class="fs"><div class="l">GROUND STN</div><div class="v">INKBENCH-GS1</div>
+      <div class="l" style="margin-top:6px">FIG · MODE</div><div class="v" id="figv"></div></div>
+    <div class="ev" id="ev"></div>
+  </footer>
+</div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA;
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const f1=v=>(+v).toFixed(1),f2=v=>(+v).toFixed(2);
+const totalMass=D.measures.reduce((s,m)=>s+m.massG,0);
+const stab=D.report.checks.find(c=>c.name==='stability');
+const clr=D.report.checks.find(c=>c.name==='clearance');
+
+/* pass strip */
+document.getElementById('pass').innerHTML=`
+  <div class="hcell"><span class="l">SATELLITE</span><span class="v">INKB-1 · ${esc(D.spec.name.toUpperCase())}</span></div>
+  <div class="hcell"><span class="l">PASS</span><span class="v" id="cd">LOS −--:--:--</span></div>
+  <div class="hcell"><span class="l">VERIFY T+</span><span class="v">${f1(D.report.timingMs)} ms</span></div>
+  <div class="hcell"><span class="l">ATTEMPTS</span><span class="v">${D.attempts}</span></div>
+  <div class="hcell"><span class="l">FRAME COUNT</span><span class="v" id="fc">0</span></div>
+  <div class="sig"><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="lock">${D.report.pass?'■ LOCK · NOMINAL':'■ NO LOCK'}</div>`;
+/* countdown: fake LOS timer seeded by timing */
+let cdS=Math.round(420+D.report.timingMs);
+setInterval(()=>{cdS=Math.max(0,cdS-1);
+  const h=String(Math.floor(cdS/3600)).padStart(2,'0'),m=String(Math.floor(cdS/60)%60).padStart(2,'0'),s=String(cdS%60).padStart(2,'0');
+  document.getElementById('cd').textContent=`LOS −${h}:${m}:${s}`;},1000);
+
+/* telemetry frames */
+let fr='',fn=1042;
+const push=(ch,data,st)=>{fr+=`<div class="row"><span class="f">FRM-${fn}</span><span class="p">${ch}</span><span class="d">${data}</span><span class="${st==='NOMINAL'?'ok':'warn'}">${st}</span></div>`;fn+=7;};
+D.measures.forEach(m=>{
+  const dm=m.shape==='box'?m.dims.join('×'):'⌀'+f1(m.dims[0])+'×'+f1(m.dims[2]);
+  push('TM-PART',`${m.id} ${m.shape} ${m.material} dim=${dm}mm vol=${Math.round(m.volMM3)}mm³ ρ=${m.density}`,'NOMINAL');
+  push('TM-MASS',`${m.id} mass=${f2(m.massG)}g`,'NOMINAL');
+});
+D.spec.joints.forEach((j,i)=>push('TM-JNT',`j${i+1} ${j.type} ${j.a}~${j.b} axis=${j.axis.join(',')} @${j.anchor.map(v=>f1(v)).join(',')}`,'NOMINAL'));
+D.report.checks.forEach(c=>push('TM-CHK',`${c.name}: ${esc(c.detail).slice(0,84)}`,c.status==='pass'?'NOMINAL':'LIMIT'));
+push('TM-SUM',`mass=${f2(totalMass/1000)}kg tip-margin=${f2(stab.measured)}mm clr=${f2(clr.measured)}mm`,'NOMINAL');
+document.getElementById('tm').innerHTML=fr;
+document.getElementById('fc').textContent=fn-1042;
+document.getElementById('tmrate').textContent=(fn-1042)+' FRAMES DECODED · 0 ERR';
+const tmEl=document.getElementById('tm');tmEl.scrollTop=1e6;
+
+/* tracking monitor overlays */
+document.getElementById('azel').textContent='AZ 042.3° · EL 61.7°';
+const trk=document.getElementById('trk');
+[['42%','30%','180px'],['50%','55%','120px'],['56%','22%','90px']].forEach(([t,l,s])=>{
+  const r=document.createElement('div');r.className='ring';
+  r.style.cssText=`top:${t};left:${l};width:${s};height:${s};transform:translate(-50%,-50%)`;trk.appendChild(r);});
+D.spec.parts.forEach((p,i)=>{const x=document.createElement('div');x.className='x';
+  x.style.cssText=`top:${22+i*13}%;left:${30+i*11}%`;trk.appendChild(x);
+  const t=document.createElement('div');t.className='tl2';t.style.cssText=`top:${22+i*13}%;left:calc(${30+i*11}% + 12px)`;
+  t.textContent=p.id.toUpperCase();trk.appendChild(t);});
+const lt=document.createElement('div');lt.className='tl2';
+lt.style.cssText='top:8px;left:10px';lt.textContent='● REC — lamp_flat.png';trk.appendChild(lt);
+
+/* limits = checks */
+document.getElementById('lims').innerHTML=D.report.checks.map(c=>`
+  <div class="lim"><div class="n">${esc(c.name.toUpperCase())}</div>
+  <div class="s" style="${c.status!=='pass'?'color:var(--red)':''}">${c.status==='pass'?'IN TOL':'OOS'} <b>${c.measured?f2(c.measured):''}</b></div></div>`).join('');
+
+/* uplink queue */
+document.getElementById('uq').textContent=D.plan.length+' CMDS';
+document.getElementById('upl').innerHTML=D.plan.map((p,i)=>{
+  if(p.kind==='place')return `<div class="cmd"><span class="sq">TC-${String(p.step).padStart(3,'0')}</span>
+    <span class="tx"><span class="who">ARM-${p.arm}</span> PLACE ${esc(p.part.toUpperCase())} ${p.glyph}
+    <small>mass ${f1(p.massG)}g · seat ${p.seat.map(v=>f1(v)).join(',')}</small></span></div>`;
+  return `<div class="cmd"><span class="sq" style="color:var(--cydim)">TC-···</span>
+    <span class="tx"><span class="who" style="color:var(--grn)">JOINT</span> ${esc(p.type)} ${esc(p.a)}~${esc(p.b)}
+    <small>axis ${p.axis.join(',')} @ ${p.anchor.map(v=>f1(v)).join(',')}</small></span></div>`;
+}).join('');
+
+/* directive + events */
+const bi=document.getElementById('brief');bi.value=D.brief;
+document.getElementById('uplink').onclick=()=>bi.focus();
+document.getElementById('figv').textContent='FIG-'+D.figures[0].figNum+' · '+(D.report.pass?'PASS':'FAIL');
+document.getElementById('ev').innerHTML=D.log.map(l=>`<div>▸ ${esc(l)}</div>`).join('');
+document.getElementById('ev').scrollTop=1e6;
+</script>
+</body>
+</html>

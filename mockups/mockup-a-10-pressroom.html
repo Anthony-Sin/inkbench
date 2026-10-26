@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INKBENCH — Pressroom</title>
+<style>
+  :root{
+    --paper:#efe7d4; --paper2:#e6dcc2; --ink:#262219; --inkblue:#1c3a5e; --bline:#4a7aa8;
+    --red:#a8332a; --wood:#8a6a44; --steel:#5a5e62;
+    --serif:Georgia,"Times New Roman",serif; --mono:"Courier New",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden;color:var(--ink);font-family:var(--serif);font-size:12px;
+    background:#2e2a24}
+  .shop{height:100vh;display:grid;grid-template-rows:74px 1fr 148px;gap:12px;padding:14px;
+    background:linear-gradient(#3a342c,#28231d)}
+
+  /* masthead */
+  header{background:var(--paper);border:1px solid #b8a988;border-radius:3px;display:flex;align-items:center;
+    gap:20px;padding:0 22px;box-shadow:0 4px 0 #141110,inset 0 0 60px #0001}
+  .mast{font-size:24px;font-weight:700;letter-spacing:.22em;color:#1c1a14}
+  .mast small{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.3em;color:#8a7a55;font-weight:400}
+  .rule{flex:1;height:0;border-top:3px double #8a7a55}
+  .job{font-family:var(--mono);font-size:10px;color:#6a5a3a;text-align:right;line-height:1.7}
+  .job b{color:var(--red);font-weight:700}
+
+  main{display:grid;grid-template-columns:1fr 300px 400px;gap:12px;min-height:0}
+
+  /* proof sheet */
+  .proof{background:var(--paper);border:1px solid #b8a988;border-radius:3px;padding:14px;display:flex;
+    flex-direction:column;min-height:0;box-shadow:0 4px 0 #141110;position:relative}
+  .ph{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;letter-spacing:.3em;
+    color:#8a7a55;border-bottom:2px solid #3a3226;padding-bottom:6px;margin-bottom:10px}
+  .sheet{flex:1;background:#16385e;border:1px solid #0e2440;position:relative;overflow:hidden;min-height:0;
+    box-shadow:inset 0 0 60px #0007}
+  .sheet:before{content:"";position:absolute;inset:0;
+    background-image:linear-gradient(#ffffff14 1px,transparent 1px),linear-gradient(90deg,#ffffff14 1px,transparent 1px);
+    background-size:26px 26px}
+  .sheet img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;mix-blend-mode:screen;
+    filter:invert(1) brightness(1.45) contrast(1.05)}
+  .reg{position:absolute;color:#cfe0f0;font-size:14px;font-family:var(--mono)}
+  .stamp{position:absolute;top:22px;right:18px;transform:rotate(-9deg);border:3px double var(--red);
+    color:var(--red);font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.3em;
+    padding:6px 14px;border-radius:4px;opacity:.85;background:#16385e22}
+  .caption{font-family:var(--mono);font-size:9px;color:#6a5a3a;margin-top:8px;display:flex;justify-content:space-between}
+
+  /* ink wells */
+  .inks{background:var(--paper);border:1px solid #b8a988;border-radius:3px;padding:12px;display:flex;
+    flex-direction:column;min-height:0;box-shadow:0 4px 0 #141110}
+  .inks h4{margin:0 0 8px;font-size:10px;letter-spacing:.3em;font-family:var(--mono);color:#8a7a55;
+    text-align:center;border-bottom:1px solid #c9b88e;padding-bottom:6px;font-weight:400}
+  .wellrow{display:flex;gap:8px;justify-content:space-around;margin-bottom:8px}
+  .well{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .pot{width:62px;height:62px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#e8e2d2,#b8a988 60%,#8a7a55);
+    border:2px solid #6a5a3a;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 3px 6px #0005,0 2px 4px #0003}
+  .pot i{width:42px;height:42px;border-radius:50%;box-shadow:inset 0 3px 8px #0008}
+  .well .wn{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:#4a3c22;font-weight:700}
+  .well .wd{font-size:8px;font-family:var(--mono);color:#8a7a55}
+  .spectbl{flex:1;overflow:auto;min-height:0;border-top:1px solid #c9b88e;padding-top:6px}
+  .sr{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:#4a3c22;
+    padding:4px 2px;border-bottom:1px dotted #c9b88e}
+  .sr:hover{background:#00000008}
+  .sr b{font-weight:400}
+  .sr span{color:#8a7a55}
+  .checks{border-top:2px solid #3a3226;margin-top:6px;padding-top:6px}
+  .ck{display:flex;gap:8px;font-family:var(--mono);font-size:9px;padding:2.5px 0;color:#4a3c22}
+  .ck .ok{color:var(--red);font-weight:700;letter-spacing:.1em}
+
+  /* chase table */
+  .chase{background:linear-gradient(#7a6448,#5f4d36);border:2px solid #4a3a24;border-radius:3px;padding:14px;
+    display:flex;flex-direction:column;min-height:0;box-shadow:inset 0 0 40px #0006,0 4px 0 #141110}
+  .chase h4{margin:0 0 10px;font-size:10px;letter-spacing:.3em;font-family:var(--mono);color:#e6dcc2;
+    text-align:center;font-weight:400}
+  .frame{flex:1;border:3px solid #3a2e1c;background:#4a3a24;padding:10px;overflow:auto;min-height:0;
+    display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 2px 8px #0009}
+  .blk{background:linear-gradient(#f4ecd8,#e2d4b2);border:1px solid #b8a988;border-radius:2px;
+    padding:7px 10px;font-family:var(--mono);font-size:10px;color:#2e2a20;display:flex;gap:10px;
+    align-items:baseline;box-shadow:0 2px 0 #0006;cursor:default}
+  .blk:hover{transform:translateX(2px)}
+  .blk .n{font-weight:700;color:var(--red)}
+  .blk .who{font-size:8px;background:#2e2a20;color:#e6dcc2;padding:1px 6px;border-radius:2px;letter-spacing:.1em}
+  .blk small{color:#8a7a55}
+  .furn{background:linear-gradient(#6a5638,#54432c);border:1px solid #3a2e1c;border-radius:2px;
+    padding:4px 10px;font-family:var(--mono);font-size:9px;color:#d9cba8;display:flex;gap:10px;align-items:center}
+  .furn i{width:8px;height:8px;border:1.5px solid #d9cba8;transform:rotate(45deg);flex:none}
+  .furn small{color:#a8906a}
+
+  /* job ticket + galley */
+  footer{display:grid;grid-template-columns:1fr 620px;gap:12px}
+  .ticket{background:var(--paper);border:1px solid #b8a988;border-radius:3px;padding:10px 18px;display:flex;
+    align-items:center;gap:16px;box-shadow:0 4px 0 #14110c;
+    background-image:repeating-linear-gradient(90deg,transparent 0 100%,#8a7a5518 100%)}
+  .ticket .tl{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--red);border:1.5px solid var(--red);
+    padding:4px 8px;border-radius:2px;transform:rotate(-3deg);flex:none}
+  .ticket input{flex:1;background:transparent;border:none;border-bottom:2px solid #8a7a55;font-family:var(--serif);
+    font-style:italic;font-size:15px;color:#2e2a20;padding:7px 2px}
+  .ticket input:focus{outline:none;border-bottom-color:var(--red)}
+  .pull{background:linear-gradient(#4a3a24,#33291a);color:#e6dcc2;border:2px solid #8a6a44;border-radius:4px;
+    font-family:var(--mono);font-size:10px;letter-spacing:.25em;padding:11px 24px;cursor:pointer;box-shadow:0 3px 0 #14110c}
+  .pull:hover{background:linear-gradient(#5a4830,#3a2e1e)}
+  .pull:active{transform:translateY(2px);box-shadow:0 1px 0 #14110c}
+  .galley{background:var(--paper);border:1px solid #b8a988;border-radius:3px;padding:8px 14px;overflow:hidden;
+    box-shadow:0 4px 0 #14110c;display:flex;flex-direction:column}
+  .galley .gl{font-family:var(--mono);font-size:8px;letter-spacing:.3em;color:#8a7a55;margin-bottom:4px}
+  .galley .rows{overflow:auto;min-height:0;column-width:300px;column-gap:24px}
+  .galley .rows div{font-family:var(--mono);font-size:9.5px;color:#4a3c22;padding:2px 0;
+    border-bottom:1px dotted #c9b88e;white-space:nowrap}
+  .galley .rows div:last-child{color:var(--red);font-weight:700}
+</style>
+</head>
+<body>
+<div class="shop">
+  <header>
+    <div class="mast">INKBENCH PRESS<small>AGENTIC CAD · LETTERPRESS VERIFICATION ROOM</small></div>
+    <div class="rule"></div>
+    <div class="job" id="jobticket"></div>
+  </header>
+  <main>
+    <div class="proof">
+      <div class="ph"><span>PROOF SHEET No.<span id="pno"></span></span><span>CYANOTYPE · EXPLODED 75%</span><span id="pstat"></span></div>
+      <div class="sheet">
+        <img src="lamp_exploded.png" alt="exploded render">
+        <span class="reg" style="top:8px;left:10px">+</span>
+        <span class="reg" style="top:8px;right:10px">+</span>
+        <span class="reg" style="bottom:8px;left:10px">+</span>
+        <span class="reg" style="bottom:8px;right:10px">+</span>
+        <div class="stamp" id="stamp"></div>
+      </div>
+      <div class="caption"><span id="cap1"></span><span id="cap2"></span></div>
+    </div>
+    <div class="inks">
+      <h4>INK WELLS — MATERIALS</h4>
+      <div class="wellrow" id="wells"></div>
+      <div class="spectbl" id="spec"></div>
+      <div class="checks" id="checks"></div>
+    </div>
+    <div class="chase">
+      <h4>CHASE TABLE — LOCKED FORM · BUILD ORDER</h4>
+      <div class="frame" id="frame"></div>
+    </div>
+  </main>
+  <footer>
+    <div class="ticket">
+      <div class="tl">JOB<br>ORDER</div>
+      <input id="brief" spellcheck="false">
+      <button class="pull" id="pull">PULL PROOF ▸</button>
+    </div>
+    <div class="galley"><div class="gl">PRESSMAN'S LOG — GALLEY</div><div class="rows" id="log"></div></div>
+  </footer>
+</div>
+<script src="data.js"></script>
+<script>
+const D=window.DATA;
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const f1=v=>(+v).toFixed(1),f2=v=>(+v).toFixed(2);
+const dimStr=p=>p.shape==='box'?p.size.join(' × '):'⌀'+(p.size.r*2)+' × '+p.size.h;
+const totalMass=D.measures.reduce((s,m)=>s+m.massG,0);
+const stab=D.report.checks.find(c=>c.name==='stability');
+const clr=D.report.checks.find(c=>c.name==='clearance');
+
+document.getElementById('jobticket').innerHTML=
+  `JOB ${String(D.figures[0].figNum).padStart(4,'0')} — ${esc(D.spec.name.toUpperCase())}<br>`+
+  `<b>${D.report.pass?'VERIFIED ✓':'REJECTED ✗'}</b> · ${D.attempts} PULL · ${f1(D.report.timingMs)}ms`;
+document.getElementById('pno').textContent=String(D.figures[0].figNum).padStart(3,'0');
+document.getElementById('pstat').textContent=D.report.pass?'PASS':'FAIL';
+const stamp=document.getElementById('stamp');
+stamp.textContent=D.report.pass?'PROOF PASSED':'PROOF REJECTED';
+if(!D.report.pass)stamp.style.color='#5a5e62';
+document.getElementById('cap1').textContent=D.spec.name+' — '+D.spec.parts.length+' parts, '+D.spec.joints.length+' joints';
+document.getElementById('cap2').textContent='stock: '+Object.keys(D.spec.materials).join(', ')+' · units '+D.spec.units;
+
+/* ink wells */
+document.getElementById('wells').innerHTML=Object.entries(D.spec.materials).map(([k,m])=>`
+  <div class="well"><div class="pot"><i style="background:${m.color}"></i></div>
+  <span class="wn">${k.toUpperCase()}</span><span class="wd">ρ ${m.density} kg/m³</span></div>`).join('');
+
+/* spec */
+document.getElementById('spec').innerHTML=D.spec.parts.map(p=>{
+  const m=D.measures.find(x=>x.id===p.id);
+  return `<div class="sr"><b>${esc(p.id)} <span>· ${p.shape}/${p.material}</span></b><span>${dimStr(p)} · ${f1(m.massG)}g</span></div>`;
+}).join('')+`<div class="sr" style="border-top:1px solid #3a3226"><b>TOTAL</b><span>${f1(totalMass)}g</span></div>`;
+
+/* checks */
+document.getElementById('checks').innerHTML=D.report.checks.map(c=>`
+  <div class="ck"><span class="ok">${c.status==='pass'?'✓':'✗'}</span>
+  <span>${esc(c.name)}${c.measured?' — '+f2(c.measured):''}</span></div>`).join('')
+  +`<div class="ck" style="color:#8a7a55"><span></span><span>tip-margin ${f2(stab.measured)}mm · clearance ${f2(clr.measured)}mm</span></div>`;
+
+/* chase frame: place=type block, joint=furniture strip */
+document.getElementById('frame').innerHTML=D.plan.map(p=>{
+  if(p.kind==='place')return `<div class="blk"><span class="n">${String(p.step).padStart(2,'0')}</span>
+    <span class="who">ARM ${p.arm}</span>
+    <span><b>${esc(p.part.toUpperCase())}</b> ${p.glyph} <small>${f1(p.massG)}g · seat ${p.seat.map(v=>f1(v)).join(', ')}</small></span></div>`;
+  return `<div class="furn"><i></i><span>${esc(p.type)} — ${esc(p.a)} → ${esc(p.b)}</span>
+    <small>@${p.anchor.map(v=>f1(v)).join(',')}${p.late?' · late':''}</small></div>`;
+}).join('');
+
+/* ticket + galley */
+const bi=document.getElementById('brief');bi.value=D.brief;
+document.getElementById('pull').onclick=()=>bi.focus();
+document.getElementById('log').innerHTML=D.log.map(l=>`<div>${esc(l)}</div>`).join('');
+</script>
+</body>
+</html>
