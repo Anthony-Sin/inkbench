@@ -1,840 +1,626 @@
-// ============================================================================
-// src/ui/workbench.js — mounts the Inkbench card strip into #app.
-// Card order (contract): Brief → Spec Blueprint → Viewport → Test Report →
-// Exploded/About. The page never scrolls vertically; #app scrolls horizontally
-// (vertical wheel is translated to scrollLeft) and each card scrolls inside.
-// ============================================================================
+// Inkbench workbench — graphterm shell.
+// Layout: appbar (doc-tab figures) / workspace ribbon / term | viewport | BOM
+// / op timeline. Everything here renders real pipeline output.
 import { initViewport } from './viewport.js';
-import { renderMeasures, renderBuildPlan } from './buildplan.js';
+import { mountTerm } from './term.js';
+import { measuresFor } from './buildplan.js';
 
-/* ------------------------------ tiny dom kit ------------------------------ */
-const h = (tag, cls, text) => {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
+const h = (tag, cls, txt) => {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (txt != null) el.textContent = txt;
+  return el;
 };
-const clear = (el) => { while (el.firstChild) el.removeChild(el.firstChild); };
-const clock = () => new Date().toTimeString().slice(0, 8);
-const num = (n) => {
-  if (typeof n !== 'number' || !isFinite(n)) return String(n);
-  const s = (Math.abs(n) >= 100 ? n.toFixed(0)
-          : Math.abs(n) >= 10  ? n.toFixed(1)
-          :                      n.toFixed(2));
-  return (s.includes('.') ? s.replace(/\.?0+$/, '') : s) || '0';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const num = v => {
+  const s = (+v).toFixed(2);
+  return s.includes('.') ? s.replace(/0+$/,'').replace(/\.$/,'') : s;
 };
-const vec = (v) => Array.isArray(v) ? '[' + v.map(num).join(', ') + ']' : '—';
-const shortTitle = (s, max = 42) => {
-  s = String(s || '').trim();
-  if (s.length <= max) return s;
-  let cut = s.slice(0, max);
-  const sp = cut.lastIndexOf(' ');
-  if (sp > 12) cut = cut.slice(0, sp);
-  return cut.replace(/[\s,;:—–-]+$/, '') + '…';
-};
-const titleFrom = (text) => {          // brief -> 2–4 word title: "a desk lamp with…" -> "Desk lamp"
-  let t = String(text || '').trim().replace(/^(a|an|the)\s+/i, '');
-  if (!t) return '';
-  t = t.split(/[,:;.!?–—([]/)[0];      // first clause only — tails truncate ugly
-  const STOP = new Set(['a','an','the','with','for','and','of','to','in','on',
-                        'at','by','from','or','that','which']);
-  const w = t.split(/\s+/).filter(Boolean);
-  let n = Math.min(4, w.length);
-  while (n > 2 && STOP.has(w[n - 1].toLowerCase())) n--;   // never end on a connector
-  if (!n) return '';
-  const out = w.slice(0, n).join(' ');
-  return out[0].toUpperCase() + out.slice(1);
-};
+const dimStr = p => Array.isArray(p.size) ? p.size.join('×')
+  : (p.size && p.size.r != null ? '⌀' + (p.size.r * 2) + '×' + p.size.h
+  : (p.size && p.size.points ? p.size.points.length + 'pt·h' + p.size.h : '?'));
+const shapeIc = s => ({box:'▦',cylinder:'◉',extrude:'✚',sphere:'●',cone:'▲',capsule:'▯'}[s] || '◇');
+const shortTitle = s => (s || '').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,22) || 'design';
 
-function cardEl(idx, title, cls, dataKey){
-  const card = h('section', 'card' + (cls ? ' ' + cls : ''));
-  card.setAttribute('data-card', dataKey);
-  const head = h('header', 'card-head');
-  head.append(h('span', 'card-idx', idx), h('h2', 'card-title', title), h('span', 'rule'));
-  const body = h('div', 'card-body');
-  card.append(head, body);
-  return { card, head, body };
-}
-
-function row(k, v, sub){
-  const r = h('div', 'srow');
-  if (k != null) r.append(h('span', 'k', k));
-  if (v != null) r.append(h('span', 'v', v));
-  if (sub != null) r.append(h('span', 'sub', sub));
-  return r;
-}
-
-function detailsEl(title, count, open){
-  const d = h('details');
-  if (open) d.setAttribute('open', '');
-  const s = h('summary');
-  s.append(h('span', null, title));
-  if (count != null) s.append(h('span', 'count' + (count ? '' : ' none'), String(count)));
-  const body = h('div', 'det-body');
-  d.append(s, body);
-  return { d, body };
-}
-
-/* ---- generic card tabs ----------------------------------------------------
-   .ctabs strip of .ctab pills pinned between the card head and card-body;
-   the active pane is the body scroller's only child, so tab content scrolls
-   inside the card exactly like untabbed content (page still never scrolls).
-   def.render(pane) runs on every switch AND every refresh() — live repaints
-   keep whichever tab the user is looking at current. */
-function makeTabs(cardEls, defs){
-  const strip = h('div', 'ctabs');
-  strip.setAttribute('role', 'tablist');
-  cardEls.card.insertBefore(strip, cardEls.body);
-  const btns = {};
-  let active = defs[0].id;
-  const state = {};              // per-tab view state kept across rebuilds
-  for (const d of defs){
-    const b = h('button', 'ctab', d.label);
-    b.setAttribute('type', 'button');
-    b.setAttribute('role', 'tab');
-    b.dataset.tab = d.id;
-    b.addEventListener('click', () => select(d.id));
-    strip.append(btns[d.id] = b);
-  }
-  strip.addEventListener('keydown', (e) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    // APG: movement is relative to the FOCUSED tab, not the active one
-    const from = (document.activeElement && document.activeElement.dataset
-      && defs.some(d => d.id === document.activeElement.dataset.tab))
-      ? document.activeElement.dataset.tab : active;
-    const i = defs.findIndex(d => d.id === from);
-    e.preventDefault();
-    const j = (i + (e.key === 'ArrowRight' ? 1 : defs.length - 1)) % defs.length;
-    select(defs[j].id); btns[defs[j].id].focus();
-  });
-  /* panes are rebuilt on every repaint — keep scroll position, and persist
-     only the <details> the USER toggled (absolute open-sets would freeze a
-     section's render-default when a later spec flips it). 'toggle' is
-     non-bubbling in some engines, so capture on the body. */
-  cardEls.body.addEventListener('click', (e) => {
-    const s = e.target.closest && e.target.closest('summary');
-    if (!s) return;
-    const d = s.parentElement;
-    if (!d || d.tagName !== 'DETAILS') return;
-    const t = s.querySelector('span');
-    if (!t) return;
-    // capture-phase: d.open is still the PRE-toggle value here
-    const st = state[active] || (state[active] = {});
-    (st.touched || (st.touched = {}))[t.textContent] = !d.open;
-  }, true);
-  function snapshot(){
-    const st = state[active] || (state[active] = {});
-    st.scrollTop = cardEls.body.scrollTop;
-  }
-  function restore(){
-    const st = state[active];
-    if (!st) return;
-    if (st.touched) for (const d of cardEls.body.querySelectorAll('details')){
-      const t = d.querySelector('summary > span');
-      if (t && st.touched[t.textContent] !== undefined)
-        d.toggleAttribute('open', st.touched[t.textContent]);
-    }
-    cardEls.body.scrollTop = st.scrollTop || 0;
-  }
-  function rebuild(){
-    clear(cardEls.body);
-    const def = defs.find(d => d.id === active);
-    const pane = h('div', 'ctab-pane');
-    pane.setAttribute('role', 'tabpanel');
-    cardEls.body.append(pane);
-    if (def) def.render(pane);
-    restore();
-  }
-  function select(id){
-    if (id === active || !defs.some(d => d.id === id)) return;
-    snapshot();                  // outgoing tab keeps its scroll/open state
-    active = id; sync(); rebuild();
-  }
-  function sync(){
-    for (const d of defs){
-      btns[d.id].classList.toggle('on', d.id === active);
-      btns[d.id].setAttribute('aria-selected', d.id === active ? 'true' : 'false');
-    }
-  }
-  function refresh(){            // repaint of the SAME tab — preserve its view
-    snapshot();
-    rebuild();
-  }
-  sync(); rebuild();
-  return { select, refresh, get active(){ return active; } };
-}
-
-/* pretty-printed spec JSON with light ink-tinting (keys / strings / numbers /
-   literals) — real data, escaped, then tokenised by one regex pass */
-function tintJSON(obj){
-  let s;
-  try { s = JSON.stringify(obj, null, 2); } catch (e) { s = String(obj); }
-  const esc = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return esc.replace(
-    /("(?:[^"\\]|\\.)*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g,
-    (m, str, colon) => {
-      if (str) return '<span class="' + (colon ? 'jk' : 'js') + '">' + str + '</span>' + (colon || '');
-      if (m === 'true' || m === 'false' || m === 'null') return '<span class="jb">' + m + '</span>';
-      return '<span class="jn">' + m + '</span>';
-    });
-}
-
-/* --------------------------------- mount ---------------------------------- */
 export function mountUI(root){
-  root.setAttribute('data-inkbench', '');
+  root.innerHTML = `
+  <div id="app">
+    <div id="appbar">
+      <span class="cell-logo"></span>
+      <span class="word">INK<em>BENCH</em>/ENG</span>
+      <div class="dtabs" id="dtabs"></div>
+      <div class="qact">
+        <span class="qbtn" id="qVerify" title="print last verification">✓</span>
+      </div>
+      <div class="right"><span class="avatar">EG</span></div>
+    </div>
+    <div id="ribbon">
+      <div id="wtabs"></div>
+      <div id="ribbonBody"><div class="rempty">build something — the ribbon fills with real spec data</div></div>
+    </div>
+    <div id="ws">
+      <aside id="term"></aside>
+      <main id="vp">
+        <div class="mat"><div id="vpwrap"></div></div>
+        <div id="vpempty"><b>AWAITING FIRST DESIGN</b><span>type a brief in the terminal — muse designs, the bench verifies</span></div>
+        <div class="docchip card" hidden><div class="fig" id="figLbl"></div><div class="meta" id="figMeta"></div></div>
+        <div class="buildtag card" id="btag"></div>
+        <div class="maxhint card">esc · double-click to restore</div>
+        <div class="viewcube card"><svg width="54" height="50" viewBox="0 0 54 50">
+          <g fill="none" stroke="#231e16" stroke-width="1.3">
+            <path d="M27 4 L48 16 L48 36 L27 47 L6 36 L6 16 Z"/>
+            <path d="M27 4 L27 25 M6 16 L27 25 M48 16 L27 25 M27 25 L27 47"/>
+            <path d="M16.5 10 L37.5 22 M16.5 10 L16.5 31 M37.5 22 L37.5 43" stroke="rgba(65,83,143,.4)" stroke-width=".8"/>
+          </g>
+          <text x="27" y="15" font-size="6" text-anchor="middle" font-family="ui-monospace" fill="#41538f">Z</text>
+          <text x="14" y="39" font-size="6" text-anchor="middle" font-family="ui-monospace" fill="#231e16">X</text>
+          <text x="40" y="39" font-size="6" text-anchor="middle" font-family="ui-monospace" fill="#231e16">Y</text>
+        </svg><span class="lbl">ISO-GRID</span></div>
+        <div class="strips" id="strips"></div>
+        <div id="chkl"></div>
+        <div class="navbar card" id="navbar"></div>
+        <div class="seal" id="seal"></div>
+        <div id="insp" class="card">
+          <div class="ih"><span id="insT"></span><button class="x" id="insX">✕</button></div>
+          <table id="insTb"></table>
+        </div>
+      </main>
+      <aside id="browser">
+        <div class="dhead">BILL OF PARTS <span class="sheet" id="bomRev">rev —</span></div>
+        <div id="bsearch">⌕&nbsp;<input id="bq" placeholder="item lookup…" spellcheck="false"></div>
+        <div id="tree"><div class="empty">no items — run a build</div></div>
+      </aside>
+    </div>
+    <div id="timeline">
+      <div class="tlSide">
+        <div class="t1">Op Chain · click to scrub</div>
+        <div class="t2" id="tlCount">—</div>
+        <button class="play" id="tlPlay" title="replay build" disabled>▶</button>
+      </div>
+      <div id="tlRow"><div class="empty">op chain — awaiting build</div></div>
+    </div>
+  </div>`;
 
-  /* ===================== 01 · BRIEF ===================== */
-  const brief = cardEl('01', 'Brief', 'card-brief', 'brief');
+  const $ = s => root.querySelector(s), $$ = s => [...root.querySelectorAll(s)];
+  const vp = $('#vp'), tree = $('#tree'), tlRow = $('#tlRow');
+  const docChip = $('.docchip'), figLbl = $('#figLbl'), figMeta = $('#figMeta'),
+        btag = $('#btag'), seal = $('#seal'), chkl = $('#chkl'), vpempty = $('#vpempty');
 
-  const brand = h('div', 'brand-block');
-  const brandH = h('h1', 'brand');
-  brandH.append(h('span', null, 'INKBENCH'), h('span', 'brand-dot', '.'));
-  brand.append(
-    brandH,
-    h('p', 'tagline', 'agentic CAD that proves it works'),
-    h('div', 'brand-rule')
-  );
+  /* ============================ state ============================ */
+  let spec = null, built = null, report = null, reportOpts = null, plan = [], measures = [];
+  let figures = [], figNum = 0, selFig = null, draftFig = null, userPinned = false;
+  let submitFn = null, explodeFn = null, inFlight = false, revealTimers = [];
 
-  const how = h('ol', 'how');
-  for (const t of [
-    'describe a part in plain words',
-    'the agent drafts a JSON spec',
-    'real geometry is built in the viewport',
-    'checks stamp it PASS or FAIL',
-  ]) how.append(h('li', null, t));
-
-  const promptLabel = h('label', 'field-label', 'Your brief');
-  const ta = h('textarea', 'brief-input');
-  ta.setAttribute('placeholder', 'e.g. a phone stand with a cable slot, 70° tilt, 4mm plate…');
-  ta.setAttribute('rows', '4');
-  ta.setAttribute('spellcheck', 'false');
-
-  /* quick-brief chips — fill the textarea only; the demo shows the agent
-     doing the real work after a deliberate ctrl+enter / button press */
-  const chipRow = h('div', 'chip-row');
-  chipRow.append(h('span', 'chip-label', 'try'));
-  const QUICK_BRIEFS = [
-    ['desk lamp',       'a desk lamp with a heavy round base, an articulated arm, and a tiltable shade'],
-    ['monitor stand',   'a monitor stand with a flat top plate, two side legs, and a cable slot'],
-    ['gear bracket',    'an L-shaped gear bracket: a vertical mounting plate and a horizontal shelf'],
-    ['espresso tamper', 'an espresso tamper: a flat circular 58mm base with a rounded handle on top'],
-  ];
-  for (const [label, briefText] of QUICK_BRIEFS){
-    const chip = h('button', 'qchip', label);
-    chip.setAttribute('type', 'button');
-    chip.setAttribute('title', 'fill the brief — then draft it');
-    chip.addEventListener('click', () => {
-      ta.value = briefText;
-      ta.focus();
-      ta.setSelectionRange(ta.value.length, ta.value.length);
-    });
-    chipRow.append(chip);
-  }
-
-  const submitRow = h('div', 'submit-row');
-  const btn = h('button', 'ink-btn', 'Draft it →');
-  btn.setAttribute('type', 'button');
-  const submitHint = h('span', 'submit-hint');
-  const kbd = h('kbd', null, 'ctrl+enter');
-  submitHint.append(kbd, document.createTextNode(' to submit'));
-  submitRow.append(btn, submitHint);
-
-  const log = h('div', 'log');
-  log.setAttribute('role', 'log');
-
-  const statusStrip = h('div', 'status-strip');
-  const statusDot = h('span', 'status-dot');
-  const statusText = h('span', 'status-text', 'idle — awaiting a brief');
-  statusStrip.append(statusDot, statusText);
-
-  brief.body.append(brand, how, promptLabel, ta, chipRow, submitRow, log);
-  brief.card.append(statusStrip);   // pinned to card bottom, outside the scroller
-
-  /* ===================== 02 · SPEC BLUEPRINT ===================== */
-  const specC = cardEl('02', 'Spec Blueprint', 'card-spec', 'spec');
-  // figure title — "Fig. 01 — Desk lamp" — lands in the card head once a
-  // design actually builds; figNum is real state (one per built design)
-  const figEl = h('div', 'fig-title');
-  figEl.hidden = true;
-  specC.head.append(figEl);
-  const specEmpty = h('div', 'empty');
-  specEmpty.append(
-    document.createTextNode('awaiting first design —'),
-    document.createTextNode(' the blueprint draws itself here'),
-    h('span', 'mono', 'JSON SPEC → SECTIONS')
-  );
-  const jsonEmpty = h('div', 'empty');
-  jsonEmpty.append(
-    document.createTextNode('awaiting first design —'),
-    document.createTextNode(' the raw JSON inks itself with the spec'),
-    h('span', 'mono', '{ … }')
-  );
-
-  /* ===================== 03 · VIEWPORT ===================== */
-  const viewC = cardEl('03', 'Viewport', 'card-viewport', 'viewport');
-  const vpWrap = h('div', 'viewport-wrap');
-  const vpCorner = h('div', 'viewport-corner', 'z↑ · mm · iso 35°');
-  vpWrap.append(vpCorner);
-  // empty-bench overlay — pure CSS, fades out the moment real geometry lands
-  const vpEmpty = h('div', 'viewport-empty');
-  vpEmpty.append(
-    h('div', 've-mark'),
-    h('div', 've-text', 'the bench is empty — draft something'),
-    h('div', 've-sub', 'or click a quick brief on card 01')
-  );
-  vpWrap.append(vpEmpty);
-
-  const explodeRow = h('div', 'explode-row');
-  const exLabel = h('label', null, 'Exploded view');
-  const exSlider = h('input', 'explode');
-  exSlider.setAttribute('type', 'range');
-  exSlider.setAttribute('min', '0');
-  exSlider.setAttribute('max', '1');
-  exSlider.setAttribute('step', '0.01');
-  exSlider.value = '0';
-  const exOut = h('output', null, '0%');
-  explodeRow.append(exLabel, exSlider, exOut);
-
-  viewC.body.append(vpWrap, explodeRow);
-
+  /* ========================== viewport ========================== */
   let viewport;
-  try {
-    viewport = initViewport(vpWrap);
-  } catch (err) {
-    // headless / no-WebGL: keep the rest of the UI alive
-    vpWrap.append(h('div', 'viewport-fallback',
-      'WebGL unavailable — viewport offline (' + (err && err.message || err) + ')'));
-    viewport = { show(){}, resize(){}, controls: null };
+  try { viewport = initViewport($('#vpwrap')); }
+  catch (err) {
+    $('#vpwrap').append(h('div','viewport-fallback','WebGL unavailable — ' + (err && err.message || err)));
+    viewport = { show(){}, resize(){}, setStyle(){}, setPartVisible(){}, showOnlyParts(){},
+                 allPartIds(){ return []; }, labels(){}, wobble(){}, dimExcept(){}, clearDim(){} };
   }
+  $('#vpempty').style.display = '';
 
-  /* ===================== 04 · TEST REPORT ===================== */
-  const repC = cardEl('04', 'Test Report', 'card-report', 'report');
-  const repEmpty = h('div', 'empty');
-  repEmpty.append(
-    document.createTextNode('no checks yet —'),
-    document.createTextNode(' the stamp lands after a build'),
-    h('span', 'mono', 'PASS / FAIL')
-  );
-
-  /* ===================== 05 · EXPLODED / ABOUT ===================== */
-  const aboutC = cardEl('05', 'Exploded / About', 'card-about', 'about');
-  const aboutP = h('p', 'about-p');
-  aboutP.append(
-    document.createTextNode('INKBENCH turns a plain-language brief into '),
-    h('b', null, 'verified mechanical parts'),
-    document.createTextNode('. The agent writes a spec, the bench builds real geometry, then physical checks stamp the result — nothing is faked.')
-  );
-  const exP = h('p', 'about-p');
-  exP.append(
-    document.createTextNode('Every spec carries an assembly order with '),
-    h('b', null, 'insert_from'),
-    document.createTextNode(' vectors. The slider in the viewport card spreads parts along them: '),
-    h('b', null, '0'),
-    document.createTextNode(' assembled · '),
-    h('b', null, '1'),
-    document.createTextNode(' fully exploded.')
-  );
-  const legend = h('div', 'legend');
-  for (const [c, name, use] of [
-    ['#c8552e', 'burnt orange', 'actions · fail-adjacent'],
-    ['#3a6ea5', 'muted blue',   'spec · info'],
-    ['#6a8a5f', 'sage',         'pass · joints'],
-  ]){
-    const r2 = h('div', 'lrow');
-    const sw = h('span', 'swatch');
-    sw.style.background = c;
-    r2.append(sw, h('span', null, name + ' '), h('span', 'mono', c + ' — ' + use));
-    legend.append(r2);
+  /* style strips — real render passes */
+  const STYLES = ['toon','flat','wire','clay','blueprint','xray','exploded'];
+  const stripsEl = $('#strips');
+  STYLES.forEach(k => {
+    const b = h('button','strip',k); b.dataset.s = k;
+    b.addEventListener('click', () => setStyle(k));
+    stripsEl.appendChild(b);
+  });
+  function setStyle(k){
+    if (!built) return;
+    $$('.strip').forEach(s => s.classList.toggle('on', s.dataset.s === k));
+    if (k === 'exploded'){ viewport.setStyle('toon'); explodeFn && explodeFn(0.75); }
+    else { explodeFn && explodeFn(0); viewport.setStyle(k); }
   }
-  const fine = h('div', 'fine',
-    'paper #f5f0e8 · ink #1a1712 · three.js r180\nhorizontal strip — the page never scrolls down');
+  function activeStyle(){ const s = $('.strip.on'); return s ? s.dataset.s : 'toon'; }
+  setStyleOn('toon');
+  function setStyleOn(k){ $$('.strip').forEach(s => s.classList.toggle('on', s.dataset.s === k)); }
 
-  /* session figure gallery — every design that actually builds this session
-     files itself here ("Fig. 01 — Desk lamp"); entries are real restore
-     points: clicking one repaints its cached spec/report/model */
-  const galEmpty = h('div', 'gal-empty',
-    'nothing built yet — each finished design files itself here');
-  const gal = h('div', 'gallery');
-  aboutC.body.append(aboutP, h('div', 'mini-title', 'Session figures'),
-                     galEmpty, gal,
-                     h('div', 'mini-title', 'Exploded view'),
-                     exP, h('div', 'mini-title', 'Ink palette'), legend, fine);
-
-  /* ---- assemble strip (contract order) ---- */
-  root.append(brief.card, specC.card, viewC.card, repC.card, aboutC.card);
-
-  /* ---- tiny fixed keyboard-hint footer ---- */
-  root.append(h('div', 'kbd-hint',
-    'wheel = pan horizontally · drag = orbit on viewport · wheel on model = zoom'));
-
-  /* ===================== strip behaviour ===================== */
-  // vertical wheel -> horizontal pan (except over the 3D canvas, where wheel
-  // is OrbitControls' zoom — it preventDefaults, which we also respect)
-  root.addEventListener('wheel', (e) => {
-    if (e.defaultPrevented) return;
-    if (e.target && e.target.closest && e.target.closest('.viewport-wrap')) return;
-    if (Math.abs(e.deltaX) >= Math.abs(e.deltaY) && e.deltaX !== 0) return;
-    // overflowing card interiors scroll first; the strip pans at the bounds
-    const cb = e.target && e.target.closest && e.target.closest('.card-body');
-    if (cb && cb.scrollHeight > cb.clientHeight + 2) {
-      const atTop = cb.scrollTop <= 1;
-      const atBot = cb.scrollTop + cb.clientHeight >= cb.scrollHeight - 2;
-      if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBot)) return;
+  /* nav bar — real controls */
+  const nav = [['⌂','home'],['✥','orbit'],['⤢','pan'],['+','in'],['−','out'],['▣','fit']];
+  const navbar = $('#navbar');
+  navbar.innerHTML = nav.map((n,i) =>
+    (i===3?'<span class="sep"></span>':'') + `<button class="nbtn" data-n="${n[1]}" title="${n[1]}">${n[0]}</button>`).join('');
+  navbar.addEventListener('click', e => {
+    const b = e.target.closest('.nbtn'); if (!b) return;
+    const c = viewport.controls; if (!c) return;
+    const n = b.dataset.n;
+    if (n === 'in') viewport.camera.zoom = Math.min(viewport.camera.zoom * 1.25, 60);
+    if (n === 'out') viewport.camera.zoom = Math.max(viewport.camera.zoom / 1.25, 0.02);
+    if (n === 'home' || n === 'fit'){ if (built) viewport.show(built); }
+    viewport.camera.updateProjectionMatrix();
+    if (n === 'orbit' || n === 'pan'){
+      $$('.nbtn').forEach(x => x.classList.remove('on')); b.classList.add('on');
+      c.mouseButtons.LEFT = n === 'orbit' ? 0 : 2; /* ROTATE vs PAN in three's enum order */
     }
-    const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-    root.scrollLeft += d;
-    e.preventDefault();
-  }, { passive: false });
-
-  // pointer-drag pan on non-interactive background
-  let drag = null;
-  root.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
-    if (e.target && e.target.closest &&
-        e.target.closest('button,textarea,input,select,a,summary,.viewport-wrap,.log,details')) return;
-    drag = { x: e.clientX, sl: root.scrollLeft };
-    root.classList.add('dragging');
   });
-  root.addEventListener('pointermove', (e) => {
-    if (drag) root.scrollLeft = drag.sl - (e.clientX - drag.x);
-  });
-  const endDrag = () => { drag = null; root.classList.remove('dragging'); };
-  root.addEventListener('pointerup', endDrag);
-  root.addEventListener('pointercancel', endDrag);
 
-  /* ===================== helpers ===================== */
-  function logLine(msg, cls){
-    const line = h('div', 'log-line' + (cls ? ' ' + cls : ''));
-    line.append(h('span', 'log-time', '[' + clock() + ']'), h('span', 'log-msg', msg));
-    log.append(line);
-    while (log.children.length > 200) log.removeChild(log.firstChild);
-    log.scrollTop = log.scrollHeight;
+  /* maximize on double-click */
+  vp.addEventListener('dblclick', e => {
+    if (e.target.closest('#insp,button,input')) return;
+    vp.classList.toggle('max'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape'){ vp.classList.remove('max'); hideInsp(); }});
+
+  /* seal */
+  seal.innerHTML = `<svg width="104" height="104" viewBox="0 0 104 104" style="position:absolute;inset:0">
+    <circle cx="52" cy="52" r="48" fill="none" stroke="currentColor" stroke-width="2"/>
+    <circle cx="52" cy="52" r="40" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 2"/></svg>
+    <div class="inner"><span class="big" id="sealBig">PASS</span><span class="sm" id="sealSm"></span></div>`;
+
+  /* inspector card */
+  const insp = $('#insp'), insT = $('#insT'), insTb = $('#insTb');
+  function hideInsp(){ insp.style.display = 'none'; }
+  $('#insX').addEventListener('click', hideInsp);
+  function showInsp(partId){
+    const p = spec && spec.parts.find(x => x.id === partId);
+    const m = measures.find(x => x.id === partId);
+    if (!p || !m) return;
+    const joins = spec.joints.filter(j => j.a === partId || j.b === partId)
+      .map(j => j.a === partId ? j.b : j.a);
+    insT.textContent = 'ITEM ' + partId;
+    insTb.innerHTML =
+      `<tr><td>shape</td><td>${esc(p.shape)}</td></tr>` +
+      `<tr><td>dims</td><td>${esc(dimStr(p))} mm</td></tr>` +
+      `<tr><td>material</td><td>${esc(p.material)}</td></tr>` +
+      `<tr><td>mass</td><td>${m.massG.toFixed(2)} g</td></tr>` +
+      `<tr><td>pos</td><td>[${m.pos.map(v=>num(v)).join(', ')}]</td></tr>` +
+      `<tr><td>joins</td><td>${esc(joins.join(', ') || '—')}</td></tr>`;
+    const row = tree.querySelector(`.tr.part[data-p="${CSS.escape(partId)}"]`);
+    const bR = $('#browser').getBoundingClientRect();
+    const r = row ? row.getBoundingClientRect() : bR;
+    insp.style.display = 'block';
+    insp.style.right = (innerWidth - bR.left + 16) + 'px';
+    insp.style.top = Math.min(Math.max(r.top - 40, 60), innerHeight - 240) + 'px';
   }
 
-  /* ===================== public api ===================== */
-  let submitFn = null;
-  let explodeFn = null;
-  let figNum = 0;          // running figure counter — one per submitted design
-  let lastSpec = null;     // spec behind the current blueprint/report/tabs
-  let lastReport = null;      // report behind the current report card
-  let lastReportOpts = null;  // its render opts ({retry})
-  let lastPrompt = '';     // brief text (kept for the log)
-  let lastTitle = '';      // display title — chip label or titleized brief
-  const figures = [];      // session cache — every figure is a restore point
-  let draftFig = null;     // figure the in-flight submission is writing to
-  let selFig = null;       // figure currently painted in spec/report/viewport
-  let userPinned = false;  // user picked a gallery figure mid-run — don't steal it back
+  /* =========================== terminal =========================== */
+  const term = mountTerm($('#term'), {
+    submit(text){ doSubmit(text); },
+    explode(v){ setStyle('exploded'); },
+    printPlan(){
+      if (!plan.length) return term.line('no plan yet — verify a build first', 'dim');
+      plan.forEach((s,i) => term.line('  ' + (i+1) + '. ' +
+        (s.kind === 'place'
+          ? `[${s.arm}] place ${s.part} @ (${(s.seat||[]).map(v=>num(v)).join(',')})`
+          : `⚿ ${s.type} ${s.a}~${s.b}`)));
+    },
+    status(){ return lastStatus; },
+  });
+  let lastStatus = 'pad ready';
+  const setStatus = s => { lastStatus = s; term.line('· ' + s, 'dim'); };
+  $('#qVerify').addEventListener('click', () => term.cmd('verify'));
+
+  /* ========================== ribbon ========================== */
+  const wtabs = $('#wtabs'), ribbonBody = $('#ribbonBody');
+  const group = (cap, items) => `<div class="rgroup"><div class="items">${items}</div><div class="gcap">${cap}</div></div>`;
+  const rb = (ic, label, sub, tip, data) =>
+    `<button class="rbtn" title="${esc(tip||'')}" ${data||''}><span class="ic">${ic}</span><span>${esc(label)}</span>${sub?`<span class="sub">${esc(sub)}</span>`:''}</button>`;
+
+  const TABS = {
+    'DESIGN': () => spec && (
+      group('Materials', Object.entries(spec.materials||{}).map(([k,m]) =>
+        `<button class="rbtn" data-act="mat" data-k="${esc(k)}" title="${esc(k)} · ρ ${m.density}"><span class="sw" style="background:${esc(m.color||'#ccc')}"></span><span>${esc(k)}</span><span class="sub">${num(m.density)}</span></button>`).join('')) +
+      group('Primitives', (spec.parts||[]).map(p =>
+        rb(shapeIc(p.shape), p.id, dimStr(p), p.shape + ' @ ' + (p.position||[]).join(', '), `data-act="part" data-k="${esc(p.id)}"`)).join('')) +
+      group('Constraints',
+        rb('⇄','clr '+num(spec.tests.min_clearance_mm)+'mm','', 'min clearance') +
+        rb('∠','tip '+num(spec.tests.max_tip_angle_deg)+'°','', 'max tip angle'))
+    ),
+    'VERIFY': () => report && (
+      group('Checks', report.checks.map((c,i) =>
+        `<button class="rbtn" data-act="chk" data-k="${i}" title="${esc(c.detail||'')}"><span class="ic">${c.status==='pass'?'✓':c.status==='warn'?'◦':'✗'}</span><span>${esc(c.name)}</span><span class="st ${c.status==='pass'?'stP':c.status==='warn'?'stW':'stF'}">${(c.status||'').toUpperCase()}</span></button>`).join('')) +
+      group('Measures', measures.map(m =>
+        rb('⌖', m.id, m.massG.toFixed(1)+'g', m.dims.map(d=>num(d)).join(' × ')+' mm', `data-act="part" data-k="${esc(m.id)}"`)).join(''))
+    ),
+    'ASSEMBLE': () => spec && (
+      group('Joints', spec.joints.map(j =>
+        rb('⚿', j.a+'~'+j.b, j.type, 'anchor ('+j.anchor.join(', ')+') axis ('+j.axis.join(', ')+')', `data-act="jnt" data-k="${esc(j.a+'~'+j.b)}"`)).join('')) +
+      group('Order', spec.assembly.map((a,i) =>
+        rb('↓'+(i+1), a.part, '+dir', 'insert ('+a.insert_from.join(',')+')', `data-act="part" data-k="${esc(a.part)}"`)).join(''))
+    ),
+    'BUILD': () => plan.length && (
+      group('Plan', plan.filter(s=>s.kind==='place').map(s => {
+        const i = plan.indexOf(s);
+        return `<button class="rbtn" data-act="op" data-k="${i}" title="seat (${s.seat.map(v=>num(v)).join(', ')})"><span class="ic">${s.glyph}</span><span>${esc(s.part)}</span><span class="arm ${s.arm==='A'?'aA':s.arm==='B'?'aB':'aAB'}">${s.arm}</span></button>`; }).join('')) +
+      group('Fix', plan.filter(s=>s.kind==='joint').map((s,i) =>
+        rb('⚿', s.type, s.a+'~'+s.b, 'anchor ('+s.anchor.join(', ')+')', `data-act="jnt" data-k="${esc(s.a+'~'+s.b)}"`)).join(''))
+    ),
+  };
+  const TABS_META = [['DESIGN',0],['VERIFY',1],['ASSEMBLE',2],['BUILD',3]];
+  wtabs.innerHTML = TABS_META.map(([t,i]) =>
+    `<div class="wtab" data-t="${t}"><span class="n">[${i+1}]</span>${t}</div>`).join('');
+  let activeWtab = 'DESIGN';
+  function paintRibbon(){
+    const fn = TABS[activeWtab];
+    const out = fn && fn();
+    ribbonBody.innerHTML = out || '<div class="rempty">no ' + activeWtab.toLowerCase() + ' data yet — run a build</div>';
+  }
+  $$('.wtab').forEach(t => t.addEventListener('click', () => {
+    activeWtab = t.dataset.t;
+    $$('.wtab').forEach(x => x.classList.toggle('on', x === t));
+    paintRibbon();
+  }));
+  $$('.wtab')[0].classList.add('on');
+  /* ribbon actions → real scene/data effects */
+  ribbonBody.addEventListener('click', e => {
+    const b = e.target.closest('.rbtn'); if (!b || !b.dataset.act) return;
+    const { act, k } = b.dataset;
+    if (act === 'mat'){
+      const on = b.classList.contains('on');
+      $$('.rbtn[data-act="mat"]').forEach(x => x.classList.remove('on'));
+      if (on){ viewport.clearDim(); }
+      else { b.classList.add('on');
+        viewport.dimExcept(m => (currentSpecEntry(m)?.material) === k);
+        term.line('isolate ▸ material <span class="hl">'+esc(k)+'</span>'); }
+    } else if (act === 'part'){
+      viewport.clearDim(); viewport.dimExcept(m => m.userData.partId === k);
+      selectBomRow(k); showInsp(k);
+    } else if (act === 'chk'){
+      const c = report && report.checks[+k];
+      if (c) term.line('check ▸ '+esc(c.name)+' — '+esc(c.detail||''), c.status==='fail'?'fail':'');
+    } else if (act === 'jnt'){
+      const j = spec && spec.joints.find(x => (x.a+'~'+x.b) === k);
+      if (j) term.line('joint ▸ '+esc(k)+' · '+j.type+' · axis ['+j.axis.join(', ')+'] · anchor ['+j.anchor.join(', ')+']');
+    } else if (act === 'op'){
+      scrubTo(+k); tlRow.querySelector(`.tn[data-i="${+k}"]`)?.scrollIntoView({inline:'center',block:'nearest'});
+    }
+  });
+  function currentSpecEntry(mesh){
+    const id = mesh.userData.partId;
+    return spec && spec.parts.find(p => p.id === id);
+  }
+
+  /* ============================ BOM ============================ */
+  function paintBom(){
+    if (!spec){ tree.innerHTML = '<div class="empty">no items — run a build</div>'; $('#bomRev').textContent = 'rev —'; return; }
+    $('#bomRev').textContent = 'rev ' + (report ? 'B' : 'A');
+    let tb = `<div class="tr sel"><span class="idx">—</span><b class="nm">${esc(spec.name||'design')}</b><span class="mt">${esc(spec.units||'mm')}</span></div>`;
+    tb += '<div class="bsec"><span>item · part <span class="hint">dbl-click inspect</span></span><span>dims</span></div><div class="tbl">';
+    spec.parts.forEach((p,i) => {
+      tb += `<div class="tr part" data-p="${esc(p.id)}"><span class="idx">${i+1}</span><span class="eye" data-p="${esc(p.id)}"></span><span class="nm">${esc(p.id)}</span><span class="mt">${esc(dimStr(p))}</span></div>`; });
+    tb += '</div><div class="bsec"><span>item · joint</span><span>type</span></div><div class="tbl">';
+    spec.joints.forEach((j,i) => {
+      tb += `<div class="tr"><span class="idx">J${i+1}</span><span class="nm">${esc(j.a)} ~ ${esc(j.b)}</span><span class="mt">${esc(j.type)}</span></div>`; });
+    tb += '</div><div class="bsec"><span>doc</span><span>val</span></div><div class="tbl">';
+    tb += `<div class="tr"><span class="idx">S</span><span class="nm">units</span><span class="mt">${esc(spec.units)}</span></div>`;
+    tb += `<div class="tr"><span class="idx">S</span><span class="nm">clearance</span><span class="mt">${num(spec.tests.min_clearance_mm)}mm</span></div>`;
+    tb += `<div class="tr"><span class="idx">S</span><span class="nm">tip max</span><span class="mt">${num(spec.tests.max_tip_angle_deg)}°</span></div>`;
+    tb += '</div><div class="bsec"><span>material</span><span>ρ</span></div><div class="tbl">';
+    Object.entries(spec.materials||{}).forEach(([k,m],i) => {
+      tb += `<div class="tr"><span class="idx">M${i+1}</span><span class="nm"><span class="msw" style="background:${esc(m.color||'#ccc')}"></span>${esc(k)}</span><span class="mt">${num(m.density)}</span></div>`; });
+    tb += '</div>';
+    tree.innerHTML = tb;
+  }
+  function selectBomRow(id){
+    $$('#tree .tr').forEach(x => x.classList.remove('sel'));
+    const r = tree.querySelector(`.tr.part[data-p="${CSS.escape(id)}"]`);
+    if (r) r.classList.add('sel');
+  }
+  tree.addEventListener('click', e => {
+    const ey = e.target.closest('.eye');
+    if (ey){
+      ey.classList.toggle('off');
+      const off = ey.classList.contains('off');
+      ey.closest('.tr').classList.toggle('off', off);
+      viewport.setPartVisible(ey.dataset.p, !off);
+      return;
+    }
+    const n = e.target.closest('.tr'); if (!n) return;
+    $$('#tree .tr').forEach(x => x.classList.remove('sel')); n.classList.add('sel');
+  });
+  tree.addEventListener('dblclick', e => {
+    const n = e.target.closest('.tr.part'); if (!n) return hideInsp();
+    showInsp(n.dataset.p);
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#insp') && !e.target.closest('#tree .part')) hideInsp(); });
+  $('#bq').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    $$('#tree .tr').forEach(t => { t.style.display = !q || t.textContent.toLowerCase().includes(q) ? '' : 'none'; }); });
+
+  /* ========================== timeline ========================== */
+  const tlSide = $('.tlSide'), tlCount = $('#tlCount'), tlPlay = $('#tlPlay');
+  function paintTimeline(){
+    if (!plan.length){ tlRow.innerHTML = '<div class="empty">op chain — awaiting build</div>'; tlCount.textContent = '—'; tlPlay.disabled = true; return; }
+    tlPlay.disabled = false;
+    tlCount.textContent = plan.length + ' links';
+    tlRow.innerHTML = plan.map((s,i) => {
+      const j = s.kind === 'joint';
+      const cap = j ? s.a+'~'+s.b : s.part;
+      const tag = j ? '⚿ '+s.type : ('arm '+s.arm+' '+s.glyph);
+      return `<div class="tn${j?' j':''}" data-i="${i}"><span class="num">${i+1}</span><div class="tick"></div><div class="cap">${esc(cap)}<b>${esc(tag)}</b></div></div>`; }).join('');
+  }
+  const placeIdx = i => { /* how many place-ops are complete through plan index i */
+    let n = 0; for (let j = 0; j <= i; j++) if (plan[j].kind === 'place') n++; return n; };
+  function scrubTo(i){
+    if (!plan.length || !built) return;
+    const nodes = $$('#tlRow .tn');
+    nodes.forEach((n,j) => { n.classList.toggle('done', j <= i); n.classList.toggle('sel', j === i); n.classList.remove('live'); });
+    const op = plan[i];
+    /* show exactly the parts placed through op i — real intermediate states */
+    const visible = plan.slice(0, i+1).filter(s => s.kind === 'place').map(s => s.part);
+    viewport.showOnlyParts(visible);
+    btag.style.display = 'block';
+    btag.innerHTML = op.kind === 'place'
+      ? `op ${i+1} — <b>place ${esc(op.part)}</b> · arm ${op.arm}` + (op.massG != null ? ` · ${op.massG.toFixed(1)}g` : '')
+      : `op ${i+1} — <b>⚿ ${esc(op.type)}</b> ${esc(op.a)} ~ ${esc(op.b)}`;
+    $$('#tree .tr.part').forEach(t => t.classList.toggle('building',
+      op.kind === 'place' && t.dataset.p === op.part));
+  }
+  tlRow.addEventListener('click', e => {
+    const n = e.target.closest('.tn'); if (!n) return;
+    stopReplay(); scrubTo(+n.dataset.i); });
+  function showAllParts(){ viewport.showOnlyParts(viewport.allPartIds()); btag.style.display='none';
+    $$('#tree .tr.part').forEach(t => t.classList.remove('building')); }
+
+  /* ======================== reveal / replay ======================== */
+  let revealResolve = null;
+  function stopReplay(){
+    revealTimers.forEach(clearTimeout); revealTimers = [];
+    tlPlay.textContent = '▶';
+    if (revealResolve){ const r = revealResolve; revealResolve = null; r(); }
+  }
+  const after = (ms, fn) => revealTimers.push(setTimeout(fn, ms));
+  function setNodeDone(i, live){
+    const nodes = $$('#tlRow .tn');
+    nodes.forEach((n,j) => { n.classList.toggle('done', j <= i); n.classList.toggle('live', j === i && live); });
+  }
+  /* the agent builds in front of you: real ops, real order, real meshes */
+  function replayBuild(){
+    if (!built || !plan.length) return;
+    stopReplay(); tlPlay.textContent = '❚❚';
+    $$('#tree .tr.part').forEach(t => t.classList.remove('building'));
+    viewport.showOnlyParts([]);
+    let t = 200;
+    plan.forEach((op, i) => {
+      after(t, () => {
+        scrubTo(i);
+        const n = $$('#tlRow .tn')[i]; if (n) n.classList.add('live');
+        if (op.kind === 'place') term.line(`  [${op.arm}] place ${op.part} @ (${(op.seat||[]).map(v=>num(v)).join(', ')})`, '', true);
+        else term.line(`  ⚿ ${op.type} ${op.a} ~ ${op.b}`, 'dim', true);
+      });
+      t += 480;
+    });
+    after(t += 300, () => {
+      tlPlay.textContent = '▶';
+      $$('#tlRow .tn').forEach(n => n.classList.remove('live'));
+      btag.style.display = 'none';
+      $$('#tree .tr.part').forEach(t2 => t2.classList.remove('building'));
+      if (report && report.pass) stampSeal(true); });
+  }
+  tlPlay.addEventListener('click', () => { tlPlay.textContent === '❚❚' ? stopReplay() : replayBuild(); });
+
+  function stampSeal(pass){
+    const checks = (report && report.checks) || [], fails = (report && report.failures) || [];
+    $('#sealBig').textContent = pass ? 'PASS' : 'FAIL';
+    $('#sealSm').innerHTML = pass
+      ? 'ENG. CHECK<br>' + checks.filter(c=>c.status==='pass').length + '/' + checks.length + ' OK'
+      : 'REWORK<br>' + fails.length + ' DEFECTS';
+    seal.classList.toggle('bad', !pass);
+    seal.style.color = pass ? 'var(--ok)' : 'var(--red)';
+    seal.classList.add('stamped');
+  }
+
+  /* ====================== figures → doc tabs ====================== */
+  const dtabs = $('#dtabs');
+  function paintTabs(){
+    dtabs.innerHTML = figures.map(f =>
+      `<div class="dtab${f === selFig ? ' on sel' : ''}" data-i="${f.idx}" title="fig ${f.figNum} — ${esc(f.name)}">
+        <span class="dot ${f.report ? (f.report.pass ? 'pass' : 'fail') : 'wip'}"></span>${esc(shortTitle(f.name))}.eng</div>`).join('') +
+      `<div class="dtab new" data-i="-1" title="new design">+</div>`;
+  }
+  dtabs.addEventListener('click', e => {
+    const t = e.target.closest('.dtab'); if (!t) return;
+    const i = +t.dataset.i;
+    if (i < 0){ term.focus(); return; }
+    selectFigure(i);
+  });
+  paintTabs();
+  function selectFigure(idx){
+    const fig = figures[idx]; if (!fig) return;
+    selFig = fig; userPinned = true;
+    spec = fig.spec; built = fig.built; report = fig.report; reportOpts = fig.reportOpts;
+    plan = fig.plan || []; measures = fig.spec ? measuresFor(fig.spec) : [];
+    if (fig.built){ viewport.show(fig.built); showAllParts(); setStyleOn('toon'); }
+    vpempty.style.display = 'none';
+    docChip.hidden = false;
+    figLbl.textContent = 'Fig. ' + String(fig.figNum).padStart(2,'0') + ' — ' + fig.name;
+    figMeta.textContent = (fig.spec?fig.spec.parts.length:0) + ' parts · ' + (fig.spec?fig.spec.joints.length:0) + ' joints' +
+      (fig.report ? ' · ' + fig.report.timingMs + 'ms' : '');
+    paintBom(); paintRibbon(); paintTimeline();
+    seal.classList.remove('stamped');
+    if (fig.report) stampSeal(fig.report.pass);
+    paintTabs();
+    term.line('figure ▸ Fig. ' + String(fig.figNum).padStart(2,'0') + ' restored — ' + esc(fig.name), 'dim');
+  }
+
+  /* ====================== pipeline emit API ====================== */
+  function newFig(specObj, title){
+    return { idx: figures.length, figNum: ++figNum, name: title || (specObj && specObj.name) || 'untitled design',
+             spec: specObj || null, built: null, report: null, reportOpts: null,
+             plan: [], attempts: 0, el: null };
+  }
 
   const api = {
-    built: null,
-
     onSubmit(fn){ submitFn = fn; },
-
-    // programmatic submit (e.g. ?demo) — fills the brief, then runs the exact
-    // same doSubmit path as the button and ctrl+enter
-    submit(text){
-      if (typeof text === 'string' && text.trim()) ta.value = text;
-      doSubmit();
-    },
-
-    setStatus(str){
-      statusText.textContent = str;
-      const busy = /(designing|redesigning|verifying|building|testing|inking|checking|sending|working)/i.test(str);
-      statusStrip.classList.toggle('busy', busy);
-      logLine(str);
-    },
-
-    showModel(built){
-      api.built = built;
-      viewport.show(built);
-      if (explodeFn){ const v = parseFloat(exSlider.value) || 0; if (v > 0) explodeFn(v); }
-      const nParts = built && built.parts ? (built.parts.size ?? built.parts.length) : 0;
-      vpEmpty.classList.toggle('gone', !!nParts);
-      if (nParts) logLine('model ▸ ' + nParts + ' part(s) in viewport');
-    },
-
-    showSpec(spec){
-      // emit path — the orchestrator calls this once per build ATTEMPT.
-      // all attempts of one brief share a figure (draftFig resets in doSubmit);
-      // the counter never moves on repaint or restore.
-      if (!draftFig){
-        figNum++;
-        draftFig = {
-          figNum,
-          name: shortTitle(
-            (spec && spec.name && String(spec.name).trim()) || lastTitle || 'untitled design'),
-          spec, built: api.built,
-          report: null, reportOpts: null, attempts: 0,
-          idx: figures.length, el: null
-        };
-        figures.push(draftFig);
-        galEmpty.hidden = true;
-        gal.append(galEntryEl(draftFig));
-      } else {
-        draftFig.spec = spec;
-        draftFig.built = api.built;
-        if (spec && spec.name && String(spec.name).trim())
-          draftFig.name = shortTitle(spec.name);   // follow agent renames across attempts
-      }
-      updateGalEntry(draftFig);
-      // a user-pinned gallery figure keeps the cards while a run is in
-      // flight — the draft's gallery entry still updates live. pinning the
-      // in-flight draft itself still follows repaints.
-      if (!userPinned || selFig === draftFig){ selFig = draftFig; paintSpec(selFig); }
-      logLine('spec ▸ ' + (spec && spec.parts ? spec.parts.length : 0) + ' part(s), ' +
-              (spec && spec.joints ? spec.joints.length : 0) + ' joint(s)');
-    },
-
-    showReport(report, opts){
-      // verdict + attempt count land on the figure being drafted — the
-      // gallery pill is live red/green ink, not a fixture
-      if (draftFig){
-        draftFig.report = report;
-        draftFig.reportOpts = opts || null;
-        draftFig.attempts++;
-        updateGalEntry(draftFig);
-      }
-      // final report (no retry queued) reclaims the cards even when pinned —
-      // and repaints the spec card too so blueprint/report/gallery agree
-      if (!opts || !opts.retry) userPinned = false;
-      if (!userPinned && selFig !== draftFig && draftFig){
-        selFig = draftFig; paintSpec(draftFig);
-      } else if (!userPinned) selFig = draftFig;
-      if (selFig === draftFig) paintReport(report, opts);
-      else paintReport(selFig ? selFig.report : null, selFig ? selFig.reportOpts : null);
-      markSel();
-      const pass = !!(report && report.pass);
-      logLine('report ▸ ' + (pass ? 'PASS' : 'FAIL'));
-      // red-ink the failing checks into the agent log — one line each
-      const checks = (report && report.checks) || [];
-      const fails  = (report && report.failures) || [];
-      const stOf = (c) => c.status || (c.pass != null ? (c.pass ? 'pass' : 'fail') : (c.ok ? 'pass' : 'fail'));
-      if (fails.length) for (const f of fails) logLine('✗ ' + String(f), 'fail');
-      else for (const c of checks)
-        if (stOf(c) === 'fail')
-          logLine('✗ ' + (c.name || 'check') + (c.detail ? ' — ' + c.detail : ''), 'fail');
-      for (const c of checks)
-        if (stOf(c) === 'warn')
-          logLine('◦ ' + (c.name || 'check') + ' — ' + (c.detail || c.message || 'warning'), 'warn');
-    },
-
     onExplode(fn){ explodeFn = fn; },
+    submit(text){ doSubmit(text); },
+    get built(){ return built; },
+    term, setStatus,
 
-    // gallery restore — repaints a cached figure's spec/report/model.
-    // pure render path: figNum untouched, no new gallery entry.
-    selectFigure(idx){
-      const fig = figures[idx];
-      if (!fig) return;
-      selFig = fig;
-      userPinned = true;
-      if (fig.built){
-        api.showModel(fig.built);                       // real geometry back on the bench
-        if (explodeFn) explodeFn(parseFloat(exSlider.value) || 0);  // slider stays truth
-      }
-      paintSpec(fig);
-      paintReport(fig.report, fig.reportOpts);
-      markSel();
-      logLine('gallery ▸ Fig. ' + String(fig.figNum).padStart(2, '0') +
-              ' restored — ' + fig.name);
+    beginRun(prompt){
+      inFlight = true; term.inFlight = true;
+      stopReplay();
+      draftFig = newFig(null, 'working…');
+      figures.push(draftFig);
+      selFig = draftFig; userPinned = false;
+      paintTabs();
+      term.line('brief ▸ ' + esc(prompt), '', true);
+      vpempty.style.display = 'none';
     },
-  };
 
-  /* ---- submit wiring ---- */
-  let inFlight = false;
-  const doSubmit = () => {
-    const text = (ta.value || '').trim();
-    if (!text){ logLine('describe something first'); ta.focus && ta.focus(); return; }
-    if (!submitFn || inFlight){ if (inFlight) logLine('already inking — one brief at a time'); return; }
-    lastPrompt = text;
-    userPinned = false;             // new run — the draft owns the cards again
-    draftFig = null;                // the next built spec opens a fresh figure
-    const qb = QUICK_BRIEFS.find(([, b]) => b === text);
-    lastTitle = qb ? (qb[0][0].toUpperCase() + qb[0].slice(1)) : titleFrom(text);
-    logLine('brief ▸ ' + (text.length > 90 ? text.slice(0, 87) + '…' : text));
-    inFlight = true;
-    btn.disabled = true;
-    btn.classList.add('busy');
-    btn.textContent = 'inking…';
-    Promise.resolve().then(() => submitFn(text))
-      .catch(err => api.setStatus('error: ' + (err && err.message || err)))
-      .finally(() => {
-        inFlight = false;
-        btn.disabled = false;
-        btn.classList.remove('busy');
-        btn.textContent = 'Draft it →';
+    showSpec(specObj){
+      spec = specObj;
+      measures = specObj ? measuresFor(specObj) : [];
+      term.noteSpec(specObj);
+      if (draftFig){
+        draftFig.spec = specObj;
+        if (specObj && specObj.name && String(specObj.name).trim())
+          draftFig.name = shortTitle(specObj.name);
+        paintTabs();
+      }
+      if (!userPinned || selFig === draftFig){
+        selFig = draftFig;
+        docChip.hidden = false;
+        figLbl.textContent = 'Fig. ' + String(draftFig.figNum).padStart(2,'0') + ' — ' + (draftFig.name || 'untitled');
+        figMeta.textContent = specObj.parts.length + ' parts · ' + specObj.joints.length + ' joints';
+        paintBom(); paintRibbon();
+      }
+      term.line('spec ▸ ' + specObj.parts.length + ' part(s), ' + specObj.joints.length + ' joint(s)', '', true);
+    },
+
+    showModel(b){
+      built = b;
+      if (draftFig) draftFig.built = b;
+      if (userPinned && selFig !== draftFig) return;   // user parked an old figure
+      viewport.show(b);
+      setStyleOn('toon');
+      seal.classList.remove('stamped');
+      chkl.innerHTML = '';
+    },
+
+    planReady(planOps_){
+      plan = planOps_ || [];
+      if (draftFig) draftFig.plan = plan;
+      if (!userPinned || selFig === draftFig) paintTimeline();
+    },
+
+    /* staggered reveal — real assembly order; returns a promise */
+    revealBuild(){
+      return new Promise(res => {
+        if (!built || !plan.length){ res(); return; }
+        stopReplay();
+        revealResolve = res;
+        viewport.showOnlyParts([]);
+        let t = 150;
+        plan.forEach((op, i) => {
+          after(t, () => {
+            setNodeDone(i, true);
+            const visible = plan.slice(0, i+1).filter(s => s.kind === 'place').map(s => s.part);
+            viewport.showOnlyParts(visible);
+            if (op.kind === 'place'){
+              term.line(`  [${op.arm}] place ${op.part} @ (${(op.seat||[]).map(v=>num(v)).join(', ')})`, '', true);
+              $$('#tree .tr.part').forEach(r => r.classList.toggle('building', r.dataset.p === op.part));
+            } else term.line(`  ⚿ ${op.type} ${op.a} ~ ${op.b}`, 'dim', true);
+          });
+          t += 300;
+        });
+        after(t + 120, () => {
+          $$('#tree .tr.part').forEach(r => r.classList.remove('building'));
+          $$('#tlRow .tn').forEach(n => n.classList.remove('live'));
+          if (revealResolve === res) revealResolve = null;
+          res(); });
       });
+    },
+
+    showReport(rep, opts){
+      report = rep; reportOpts = opts || null;
+      term.noteReport(rep);
+      if (draftFig){
+        draftFig.report = rep; draftFig.reportOpts = opts || null; draftFig.attempts++;
+      }
+      if (!opts || !opts.retry) userPinned = false;
+      if (!userPinned && selFig !== draftFig && draftFig){ selFig = draftFig;
+        spec = draftFig.spec; built = draftFig.built; plan = draftFig.plan || [];
+        measures = spec ? measuresFor(spec) : [];
+        if (built) viewport.show(built);
+        paintBom(); paintTimeline();
+      }
+      const showing = selFig === draftFig;
+      if (showing){
+        docChip.hidden = false;
+        figMeta.textContent = (spec?spec.parts.length:0) + ' parts · ' + (spec?spec.joints.length:0) +
+          ' joints · ' + rep.timingMs + 'ms · attempt ' + draftFig.attempts;
+        $('#bomRev').textContent = rep.pass ? 'rev B' : 'rev A';
+        paintRibbon();
+        showAllParts();
+      }
+      /* stamp real check results in sequence (presentation timing, real data) */
+      if (showing) chkl.innerHTML = '';
+      term.line('verify ▸ ' + rep.checks.length + ' checks…', '', true);
+      let t = 200;
+      rep.checks.forEach((c, i) => {
+        after(t, () => {
+          if (showing){
+            const d = h('div','chk' + (c.status === 'fail' ? ' bad' : c.status === 'warn' ? ' warn' : ''));
+            d.innerHTML = '<b>' + (c.status === 'pass' ? '✓' : c.status === 'warn' ? '◦' : '✗') + '</b> ' + esc(c.name);
+            d.title = c.detail || '';
+            d.addEventListener('click', () => term.line('check ▸ ' + esc(c.name) + ' — ' + esc(c.detail||''), c.status==='fail'?'fail':''));
+            chkl.appendChild(d);
+            requestAnimationFrame(() => d.classList.add('show'));
+          }
+          term.line('  ' + (c.status==='pass'?'✓':c.status==='warn'?'◦':'✗') + ' ' + esc(c.name) +
+            (c.measured != null ? ' — ' + num(c.measured) : ''), c.status==='fail'?'fail':'', true);
+        });
+        t += 320;
+      });
+      after(t += 260, () => {
+        term.line('report ▸ ' + (rep.pass ? 'PASS' : 'FAIL') + ' — ' + rep.timingMs + 'ms', rep.pass ? 'ok' : 'fail', true);
+        if (showing) stampSeal(rep.pass);
+        (rep.failures || []).forEach(f => term.line('✗ ' + esc(String(f)), 'fail'));
+        rep.checks.filter(c => c.status === 'warn')
+          .forEach(c => term.line('◦ ' + esc(c.name) + ' — ' + esc(c.detail || ''), 'warn'));
+        if (opts && opts.retry) term.line('↻ feeding failures back — redesign queued…', 'warn');
+        else {
+          inFlight = false; term.inFlight = false;
+          /* figure finalized — keep its geometry alive for doc-tab restore */
+          if (draftFig && draftFig.built) draftFig.built.group.userData.keepAlive = true;
+          if (rep.pass) term.line('verified ✓ (' + draftFig.attempts + ' attempt' + (draftFig.attempts>1?'s':'') + ')', 'ok');
+          paintTabs();
+          afterAgentHook(rep);
+        }
+        /* check chips fade after a beat */
+        after(3200, () => $$('#chkl .chk').forEach((c,i) => setTimeout(() => c.classList.remove('show'), i*110)));
+      });
+    },
+
+    /* pipeline died mid-run (LLM error etc) — release the terminal, mark fig */
+    abort(msg){
+      inFlight = false; term.inFlight = false;
+      stopReplay();
+      if (draftFig && !draftFig.report) draftFig.report = { pass: false, aborted: true, checks: [], failures: [] };
+      paintTabs();
+      if (msg) term.line('✗ ' + esc(String(msg)), 'fail');
+    },
+
+    /* gallery restore parity with old selectFigure */
+    selectFigure,
+    figures(){ return figures; },
   };
-  btn.addEventListener('click', doSubmit);
-  ta.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); doSubmit(); }
-  });
 
-  /* ---- explode wiring ---- */
-  exSlider.addEventListener('input', () => {
-    const v = parseFloat(exSlider.value) || 0;
-    exOut.textContent = Math.round(v * 100) + '%';
-    if (explodeFn) explodeFn(v);
-  });
-
-  /* ===================== renderers ===================== */
-  /* paint* = pure render paths (shared by live emit AND gallery restore —
-     they never touch figNum, the figures cache, or the gallery list) */
-  function paintSpec(fig){
-    lastSpec = fig.spec;
-    specTabs.refresh();      // re-renders whichever spec tab is live
-    // figure number stamped when the figure was drafted, not when repainted
-    clear(figEl);
-    figEl.append(
-      h('span', 'fig-num', 'Fig. ' + String(fig.figNum).padStart(2, '0')),
-      h('span', 'fig-dash', '—'),
-      h('span', 'fig-name', fig.name)
-    );
-    figEl.hidden = false;
-    markSel();
-  }
-
-  function paintReport(report, opts){
-    lastReport = report || null;
-    lastReportOpts = opts || null;
-    repC.card.classList.toggle('verified', !!report && !!report.pass);
-    repC.card.classList.toggle('failed', !!report && !report.pass);
-    repTabs.refresh();       // re-renders whichever report tab is live
-  }
-
-  /* ---- session figure gallery ---- */
-  function galEntryEl(fig){
-    const b = h('button', 'gfig wip');
-    b.setAttribute('type', 'button');
-    b.setAttribute('title', 'restore this figure to the bench');
-    const bd = h('span', 'gfig-body');
-    const top = h('span', 'gfig-top');
-    top.append(h('span', 'gfig-no'), h('span', 'gfig-name'));
-    bd.append(top, h('span', 'gfig-sub'));
-    b.append(h('span', 'gfig-thumb'), bd, h('span', 'pill'));
-    b.addEventListener('click', () => api.selectFigure(fig.idx));
-    fig.el = b;
-    updateGalEntry(fig);
-    return b;
-  }
-
-  function updateGalEntry(fig){
-    if (!fig.el) return;
-    const nParts  = (fig.spec && fig.spec.parts  ? fig.spec.parts.length  : 0);
-    const nJoints = (fig.spec && fig.spec.joints ? fig.spec.joints.length : 0);
-    fig.el.querySelector('.gfig-thumb').textContent = nParts;   // thumbnail = part-count cell
-    fig.el.querySelector('.gfig-no').textContent =
-      'Fig. ' + String(fig.figNum).padStart(2, '0');
-    fig.el.querySelector('.gfig-name').textContent = fig.name;
-    fig.el.querySelector('.gfig-sub').textContent =
-      nParts + ' part' + (nParts === 1 ? '' : 's') + ' · ' + nJoints + ' joint' + (nJoints === 1 ? '' : 's') +
-      (fig.attempts ? ' · ' + fig.attempts + ' attempt' + (fig.attempts > 1 ? 's' : '') : '');
-    const pill = fig.el.querySelector('.pill');
-    fig.el.classList.remove('sel');
-    if (fig.report){
-      const pass = !!fig.report.pass;
-      fig.el.classList.remove('wip');
-      fig.el.classList.toggle('pass', pass);
-      fig.el.classList.toggle('fail', !pass);
-      pill.className = 'pill ' + (pass ? 'pass' : 'fail');
-      pill.textContent = (pass ? 'VERIFIED' : 'FAIL') +
-        (fig.attempts > 1 ? ' ×' + fig.attempts : '');
-    } else {
-      fig.el.classList.add('wip');
-      fig.el.classList.remove('pass', 'fail');
-      pill.className = 'pill wip';
-      pill.textContent = 'inking…';
+  /* agent-specific post-run behaviour — real effects per chip */
+  function afterAgentHook(rep){
+    if (term.agent === 'devin' && rep.pass){
+      term.line('devin ▸ verified — replaying two-arm program', 'dim');
+      setTimeout(replayBuild, 900);
+    } else if (term.agent === 'claude'){
+      const worst = rep.checks.reduce((a,c) => (c.measured != null && c.measured < (a?.measured ?? 1e9) ? c : a), null);
+      term.line('claude ▸ review: ' + (rep.pass ? 'buildable' : 'not buildable') +
+        (worst && worst.measured != null ? ' · weakest margin ' + esc(worst.name) + ' ' + num(worst.measured) : '') +
+        ' · ' + draftFig.attempts + ' attempt(s)', 'dim');
     }
   }
 
-  function markSel(){
-    const sel = selFig && selFig.el;
-    for (const el of gal.querySelectorAll('.gfig'))
-      el.classList.toggle('sel', el === sel);
+  /* ------------------------- submit ------------------------- */
+  function doSubmit(text){
+    const t = (text || '').trim();
+    if (!t || inFlight || !submitFn) return;
+    term.typeEcho('build "' + t + '"');
+    submitFn(t);
   }
 
-  function renderSpec(spec, title){
-    const wrap = h('div', 'spec');
-    spec = spec || {};
-    const parts = spec.parts || [], joints = spec.joints || [], asm = spec.assembly || [];
-    const mats = spec.materials || {};
-
-    wrap.append(
-      h('p', 'spec-name',
-        (spec.name && String(spec.name).trim()) || title || lastTitle || 'untitled design'),
-      h('div', 'spec-meta',
-        'units ' + (spec.units || 'mm') + ' · ' + parts.length + ' part' + (parts.length === 1 ? '' : 's') + ' · ' +
-        joints.length + ' joint' + (joints.length === 1 ? '' : 's') + ' · ' + asm.length + ' assembly step' + (asm.length === 1 ? '' : 's'))
-    );
-
-    /* ---- overview / tests ---- */
-    const ov = detailsEl('Contract & tests', null, true);
-    if (spec.tests){
-      for (const [k, v] of Object.entries(spec.tests)) ov.body.append(row(k, num(v)));
-    } else ov.body.append(row('tests', '—'));
-    wrap.append(ov.d);
-
-    /* ---- materials ---- */
-    const mKeys = Object.keys(mats);
-    const mt = detailsEl('Materials', mKeys.length, false);
-    for (const k of mKeys){
-      const m = mats[k] || {};
-      const r2 = h('div', 'srow');
-      const chip = h('span', 'chip');
-      if (/^#[0-9a-f]{3,8}$/i.test(m.color || '')) chip.style.background = m.color;
-      else chip.style.background = 'transparent';
-      r2.append(chip, h('span', 'k', k),
-        h('span', 'v', (m.density ? num(m.density) + ' kg/m³' : '') + (m.color ? '  ' + m.color : '')));
-      mt.body.append(r2);
-    }
-    wrap.append(mt.d);
-
-    /* ---- parts ---- */
-    const pt = detailsEl('Parts', parts.length, true);
-    parts.forEach((p, i) => {
-      const r2 = h('div', 'srow');
-      r2.style.flexWrap = 'wrap';
-      r2.append(
-        h('span', 'asm-num', String(i + 1)),
-        h('span', 'k', p.id || 'part_' + i),
-        h('span', 'tag', p.shape || '?'),
-        h('span', 'v', dimStr(p))
-      );
-      const sub = h('div', 'check');
-      sub.append(h('span', 'cdetail',
-        'mat ' + (p.material || '—') +
-        (p.position ? '  @ ' + vec(p.position) : '') +
-        (Array.isArray(p.rotation) && p.rotation.some(x => x) ? '  rot ' + vec(p.rotation) : '')));
-      pt.body.append(r2, sub);
-    });
-    wrap.append(pt.d);
-
-    /* ---- joints ---- */
-    const jt = detailsEl('Joints', joints.length, joints.length <= 6);
-    joints.forEach(j => {
-      const r2 = h('div', 'srow');
-      r2.style.flexWrap = 'wrap';
-      r2.append(
-        h('span', 'k', (j.a || '?') + ' ↔ ' + (j.b || '?')),
-        h('span', 'tag ' + (j.type || ''), j.type || 'joint'),
-        h('span', 'v',
-          (j.axis ? 'axis ' + vec(j.axis) : '') + (j.anchor ? '  @ ' + vec(j.anchor) : ''))
-      );
-      jt.body.append(r2);
-    });
-    wrap.append(jt.d);
-
-    /* ---- assembly order ---- */
-    const as = detailsEl('Assembly order', asm.length, asm.length <= 8);
-    asm.forEach((a, i) => {
-      const r2 = h('div', 'srow');
-      r2.append(
-        h('span', 'asm-num', String(i + 1)),
-        h('span', 'k', a.part || '?'),
-        h('span', 'asm-arrow', '←'),
-        h('span', 'v', 'insert_from ' + vec(a.insert_from))
-      );
-      as.body.append(r2);
-    });
-    wrap.append(as.d);
-
-    return wrap;
-  }
-
-  function dimStr(p){
-    const s = p && p.size;
-    if (Array.isArray(s)) return s.map(num).join(' × ');
-    if (s && Array.isArray(s.points)) return 'extrude ' + s.points.length + ' pts · h ' + num(s.h);
-    if (s && s.r != null) return '⌀ ' + num(2 * s.r) + (s.h != null ? ' × ' + num(s.h) : '');
-    return '—';
-  }
-
-  function renderReport(report, opts){
-    const wrap = h('div', 'report');
-    report = report || {};
-    opts = opts || {};
-    const checks = report.checks || [];
-    const fails = report.failures || [];
-    const pass = !!report.pass;
-
-    const zone = h('div', 'stamp-zone');
-    zone.append(h('div', 'stamp ' + (pass ? 'pass' : 'fail'), pass ? 'VERIFIED' : 'FAIL'));
-    zone.append(h('div', 'stamp-sub',
-      checks.length + ' checks · ' + fails.length + ' failure' + (fails.length === 1 ? '' : 's')));
-    wrap.append(zone);
-
-    // real-count summary line: parts + joints come from the spec this
-    // report ran against; checks + timing from the report itself
-    const bits = [];
-    if (lastSpec){
-      const np = (lastSpec.parts || []).length, nj = (lastSpec.joints || []).length;
-      bits.push(np + ' part' + (np === 1 ? '' : 's'));
-      bits.push(nj + ' joint' + (nj === 1 ? '' : 's'));
-    }
-    bits.push(checks.length + ' checks');
-    if (typeof report.timingMs === 'number') bits.push(num(report.timingMs) + 'ms');
-    wrap.append(h('div', 'report-summary', bits.join('  ·  ')));
-
-    if (!pass){
-      wrap.append(h('div', 'retry-note' + (opts.retry ? '' : ' dead'),
-        opts.retry
-          ? '↻ feeding failures back to the agent — redesign queued…'
-          : '✗ no retries left — the red ink stands'));
-    }
-
-    for (const c of checks){
-      const st = c.status || (c.pass != null ? (c.pass ? 'pass' : 'fail') : (c.ok ? 'pass' : 'fail'));
-      const ok = st === 'pass';
-      const r2 = h('div', 'check' + (st === 'fail' ? ' fail' : st === 'warn' ? ' warn' : ''));
-      r2.append(
-        h('span', 'pill ' + st, ok ? '✓ pass' : st === 'warn' ? '◦ warn' : '✗ fail'),
-        h('span', 'cname', c.name || c.check || 'check'),
-        h('span', 'cval', c.value != null ? String(c.value)
-                        : c.measured != null ? String(c.measured) : '')
-      );
-      const detail = c.detail || c.message || c.msg;
-      if (detail) r2.append(h('span', 'cdetail', detail));
-      wrap.append(r2);
-    }
-
-    if (fails.length){
-      const fb = h('div', 'failures');
-      fb.append(h('div', 'fhead', 'FAILURES — RED INK'));
-      const ul = h('ul');
-      for (const f of fails) ul.append(h('li', null, String(f)));
-      fb.append(ul);
-      wrap.append(fb);
-    }
-    return wrap;
-  }
-
-  /* ---- card tabs — created after state vars exist; each pane renders on
-     switch AND on every paint* refresh, so a live tab always shows the
-     current figure's data (and gallery restores repaint it too) ---- */
-  const specTabs = makeTabs(specC, [
-    { id: 'blueprint', label: 'Blueprint',
-      render: (pane) => pane.append(lastSpec
-        ? renderSpec(lastSpec, selFig && selFig.name)
-        : specEmpty) },
-    { id: 'json', label: 'JSON',
-      render: (pane) => {
-        if (!lastSpec){ pane.append(jsonEmpty); return; }
-        const pre = h('pre', 'spec-json');
-        pre.innerHTML = tintJSON(lastSpec);
-        pane.append(pre);
-      } },
-  ]);
-  const repTabs = makeTabs(repC, [
-    { id: 'checks', label: 'Checks',
-      render: (pane) => pane.append(lastReport
-        ? renderReport(lastReport, lastReportOpts)
-        : repEmpty) },
-    { id: 'measures', label: 'Measures',
-      render: (pane) => renderMeasures(pane, lastSpec) },
-    { id: 'arms', label: 'Arms',
-      render: (pane) => renderBuildPlan(pane, lastSpec, lastReport) },
-  ]);
-
-  /* ---- opening log line ---- */
-  logLine('inkbench ready — describe a part to begin');
   return api;
 }

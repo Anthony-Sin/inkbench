@@ -102,19 +102,25 @@ export function initViewport(container){
     container.appendChild(b);
     return b;
   };
+  let labelsOn = true;
+  const labelsState = () => labelsOn;
   const labelsBtn = pill(0, 'LABELS', true);
-  labelsBtn._cb = (on) => callouts.set(on);
+  labelsBtn._cb = (on) => { labelsOn = on; callouts.set(on); };
   const wobbleBtn = pill(1, 'WOBBLE', false);
   wobbleBtn._cb = installWobble(container, renderer.domElement, 2.4);
 
   /* --------------------------------- show --------------------------------- */
+  let currentBuilt = null;
   function show(built){
     if (current){
       modelHolder.remove(current);
-      disposeDeep(current);
+      /* session-gallery builds are keepAlive — detached, never disposed */
+      if (!current.userData.keepAlive) disposeDeep(current);
       current = null;
     }
     callouts.clear();
+    currentBuilt = built || null;
+    styleState.orig.clear();
     if (!built || !built.group) return;
     current = built.group;
     current.traverse(o => {
@@ -131,6 +137,90 @@ export function initViewport(container){
     sizeStage(box);
     callouts.setParts(partAnchors(built));
     callouts.update(camera);
+  }
+
+  /* ---------------------- render styles (real passes) ----------------------
+   * toon / flat — native ink look (flat = labels off)
+   * wire / clay / blueprint / xray — honest material swaps on the real scene.
+   * exploded is handled by the caller via explode(). */
+  const styleState = { mode: 'toon', orig: new Map(), dimmed: false };
+  function eachPartMesh(fn){
+    if (!current) return;
+    current.traverse(o => { if (o.isMesh && o.userData.partId) fn(o); });
+  }
+  function keepOrig(m){ if (!styleState.orig.has(m)) styleState.orig.set(m, m.material); }
+  function restoreMats(){
+    eachPartMesh(m => { const o = styleState.orig.get(m); if (o) m.material = o; });
+  }
+  function setDecoVis(v){
+    if (!current) return;
+    /* fat-line edges + silhouette hull are meshes/groups flagged inkDeco —
+       plain isLineSegments never sees them */
+    current.traverse(o => { if (o.userData.inkDeco) o.visible = v; });
+  }
+  function setGroundVis(v){
+    const st = scene.getObjectByName('stage');
+    const g = st && st.getObjectByName('ground');
+    if (g) g.visible = v;
+  }
+  let origBg = null;
+  function setMatBg(cls){
+    const mat = container.closest('.mat') || container.parentElement;
+    if (mat){ mat.classList.remove('dark','blue'); if (cls) mat.classList.add(cls); }
+    /* paper grain is an inline style on the container — class can't beat it */
+    if (origBg == null) origBg = container.style.cssText;
+    if (cls === 'blue') container.style.background = '#1c3a66';
+    else if (cls === 'dark') container.style.background = '#14161c';
+    else container.style.cssText = origBg;
+  }
+  function setStyle(k){
+    restoreMats(); setDecoVis(true); setGroundVis(true); setMatBg(null);
+    styleState.mode = k; styleState.dimmed = false;
+    if (k === 'flat') callouts.set(false);
+    else callouts.set(labelsState());
+    if (k === 'wire'){
+      eachPartMesh(m => { keepOrig(m); m.material = new THREE.MeshBasicMaterial({ color: 0x231e16, wireframe: true }); });
+      setDecoVis(false);
+    } else if (k === 'clay'){
+      eachPartMesh(m => { keepOrig(m); m.material = new THREE.MeshLambertMaterial({ color: 0xcfc8b8 }); });
+      setDecoVis(false);
+    } else if (k === 'blueprint'){
+      eachPartMesh(m => { keepOrig(m); m.material = new THREE.MeshBasicMaterial({ color: 0xdfe9f5, wireframe: true }); });
+      setDecoVis(false); setGroundVis(false); setMatBg('blue');
+    } else if (k === 'xray'){
+      eachPartMesh(m => { keepOrig(m); m.material = new THREE.MeshPhysicalMaterial({
+        color: 0x9ab4d8, transparent: true, opacity: 0.32, roughness: 0.2, depthWrite: false }); });
+      setDecoVis(false); setGroundVis(false); setMatBg('dark');
+    }
+  }
+  /* isolate: dim every part-mesh whose spec material !== matKey */
+  function dimExcept(pred){
+    if (styleState.dimmed){ restoreMats(); styleState.dimmed = false; }
+    eachPartMesh(m => {
+      if (pred(m)) return;
+      keepOrig(m);
+      const c = (styleState.orig.get(m) && styleState.orig.get(m).color) || new THREE.Color(0x8a9099);
+      m.material = new THREE.MeshLambertMaterial({
+        color: c, transparent: true, opacity: 0.12, depthWrite: false });
+    });
+    styleState.dimmed = true;
+  }
+  function clearDim(){ if (styleState.dimmed){ restoreMats(); styleState.dimmed = false; } }
+
+  /* part visibility — for build reveal / BOM eye toggles / timeline scrub */
+  function setPartVisible(id, v){
+    const e = currentBuilt && currentBuilt.parts && currentBuilt.parts.get(id);
+    if (e && e.mesh) e.mesh.visible = !!v;
+  }
+  function showOnlyParts(ids){
+    const keep = new Set(ids);
+    if (currentBuilt && currentBuilt.parts)
+      currentBuilt.parts.forEach((e, id) => { if (e.mesh) e.mesh.visible = keep.has(id); });
+  }
+  function allPartIds(){
+    const out = [];
+    if (currentBuilt && currentBuilt.parts) currentBuilt.parts.forEach((e, id) => out.push(id));
+    return out;
   }
 
   function toBox3(bounds, fallbackObj){
@@ -230,8 +320,11 @@ export function initViewport(container){
 
   return {
     show, resize, controls, scene, camera, renderer,
-    labels: (on) => callouts.set(on),
+    labels: (on) => labelsBtn._cb(on),
     wobble: (on) => wobbleBtn._cb(on),
+    setStyle, dimExcept, clearDim,
+    setPartVisible, showOnlyParts, allPartIds,
+    styleMode: () => styleState.mode,
   };
 }
 

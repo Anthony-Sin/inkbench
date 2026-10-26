@@ -299,7 +299,7 @@ export class InkCallouts {
       it.mesh.getWorldPosition(v);
       v.y += it.lift;
       v.project(camera);
-      const hidden = v.z > 1 || v.z < -1;
+      const hidden = v.z > 1 || v.z < -1 || !it.mesh.visible;
       const sx = (v.x * 0.5 + 0.5) * w;
       const sy = (-v.y * 0.5 + 0.5) * h;
       const px = sx + it.dx, py = sy + it.dy;
