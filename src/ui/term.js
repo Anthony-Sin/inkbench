@@ -5,9 +5,9 @@
 // after a run it prints a verdict analysis. Commands: use, build, ls,
 // verify, plan, explode, help, clear.
 const AGENTS = {
-  muse:   { model: 'muse-spark-1.3 · Meta Model API', tag: 'designs the spec' },
-  devin:  { model: 'devin · orchestrates + arms',      tag: 'replays the arm plan' },
-  claude: { model: 'claude · review pass',             tag: 'reads the report' },
+  muse:   { model: 'muse-spark-1.3 · Meta Model API · designs the spec' },
+  devin:  { model: 'devin · orchestration role — replays the verified arm plan (designs still run through muse)' },
+  claude: { model: 'claude · review role — reads the report + weakest margins (designs still run through muse)' },
 };
 
 export function mountTerm(root, hooks){

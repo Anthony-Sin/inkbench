@@ -32,7 +32,7 @@ export function mountUI(root){
       <div class="qact">
         <span class="qbtn" id="qVerify" title="print last verification">✓</span>
       </div>
-      <div class="right"><span class="avatar">EG</span></div>
+      <div class="right"><span class="muse-badge">REC. WITH MUSE SPARK 1.3</span><span class="avatar">EG</span></div>
     </div>
     <div id="ribbon">
       <div id="wtabs"></div>
@@ -42,7 +42,15 @@ export function mountUI(root){
       <aside id="term"></aside>
       <main id="vp">
         <div class="mat"><div id="vpwrap"></div></div>
-        <div id="vpempty"><b>AWAITING FIRST DESIGN</b><span>type a brief in the terminal — muse designs, the bench verifies</span></div>
+        <div id="vpempty">
+          <b>USE AGENT TO TURN A PRODUCT BRIEF<br>INTO A VERIFIED, ROBOT-BUILDABLE PART</b>
+          <span>watch it fail its own structural checks — and redesign itself until it stamps PASS</span>
+          <div class="chips">
+            <button class="bchip" data-b="a desk lamp with a heavy round base, an articulated arm, and a tiltable shade">01 · desk lamp</button>
+            <button class="bchip" data-b="a handheld game console like an original game boy — rectangular body shell, a screen window near the top, a plus-shaped directional pad on the left, and two round action buttons on the right">02 · game boy</button>
+            <button class="bchip" data-b="a wall-mount gear bracket — a flat mounting plate with bolt holes and a horizontal shaft housing on top">03 · gear bracket</button>
+          </div>
+        </div>
         <div class="docchip card" hidden><div class="fig" id="figLbl"></div><div class="meta" id="figMeta"></div></div>
         <div class="buildtag card" id="btag"></div>
         <div class="maxhint card">esc · double-click to restore</div>
@@ -100,6 +108,11 @@ export function mountUI(root){
                  allPartIds(){ return []; }, labels(){}, wobble(){}, dimExcept(){}, clearDim(){} };
   }
   $('#vpempty').style.display = '';
+  /* quick-brief chips — real submits through the real pipeline */
+  $('#vpempty').addEventListener('click', e => {
+    const c = e.target.closest('.bchip');
+    if (c) doSubmit(c.dataset.b);
+  });
 
   /* style strips — real render passes */
   const STYLES = ['toon','flat','wire','clay','blueprint','xray','exploded'];

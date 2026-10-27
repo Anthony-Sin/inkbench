@@ -176,7 +176,14 @@ body{background:var(--paper);color:var(--ink);
 #vpempty{position:absolute;inset:14px;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:8px;color:var(--faint);font-size:12px;letter-spacing:.14em;
   border:1.8px dashed var(--gridB);z-index:4;pointer-events:none}
-#vpempty b{color:var(--ink2);font-size:14px;letter-spacing:.22em}
+#vpempty b{color:var(--ink2);font-size:14px;letter-spacing:.22em;text-align:center;line-height:1.7}
+#vpempty .chips{display:flex;gap:10px;margin-top:14px}
+.bchip{pointer-events:auto;cursor:pointer;font-family:inherit;font-size:10.5px;letter-spacing:.1em;
+  padding:7px 16px;border:1.4px solid var(--ink);background:var(--card);color:var(--ink);
+  box-shadow:2.5px 2.5px 0 var(--indigoS)}
+.bchip:hover{border-color:var(--indigo);background:#e8ecfa}
+.muse-badge{font-size:8.5px;letter-spacing:.16em;color:var(--indigo);
+  border:1.2px solid var(--indigo);padding:3px 9px;white-space:nowrap}
 #insp{position:absolute;z-index:40;width:260px;padding:0;display:none}
 #insp .ih{padding:8px 13px;border-bottom:1.4px solid var(--ink);font-size:10px;letter-spacing:.22em;
   font-weight:700;background:var(--pad);display:flex;justify-content:space-between}
